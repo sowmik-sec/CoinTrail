@@ -86,6 +86,10 @@ class FakeExpenseStore : ExpenseStore {
             expenses.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
                 .fold(Money.ZERO) { acc, expense -> acc + expense.amount }
         }
+
+    override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
+        all.value.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
+            .sortedByDescending { it.occurredAt }
 }
 
 class FakeCategoryStore(initial: List<Category> = emptyList()) : CategoryStore {

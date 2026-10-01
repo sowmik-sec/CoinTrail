@@ -34,6 +34,9 @@ interface ExpenseStore {
     fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>>
 
     fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money>
+
+    /** A one-shot snapshot of live expenses in `[from, to)`, for the CSV export. */
+    suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense>
 }
 
 interface CategoryStore {

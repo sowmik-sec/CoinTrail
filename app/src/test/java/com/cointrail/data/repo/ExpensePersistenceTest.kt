@@ -47,4 +47,22 @@ class ExpensePersistenceTest {
             reopened.close()
         }
     }
+
+    @Test
+    fun `loadBetween returns only live expenses inside the range`() = runBlocking {
+        val db = CoinTrailDatabase.create(context, accountKey)
+        try {
+            val repo = ExpenseRepository(db.expenseDao()) { at }
+            val keep = repo.add(Money(10_000), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 8, 0))
+            val gone = repo.add(Money(20_000), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 9, 0))
+            repo.add(Money(30_000), "preset-food", null, null, LocalDateTime.of(2026, 9, 30, 8, 0))
+            repo.delete(gone)
+
+            val rows = repo.loadBetween(dayStart, dayEnd)
+
+            assertEquals(listOf(keep), rows.map { it.id })
+        } finally {
+            db.close()
+        }
+    }
 }

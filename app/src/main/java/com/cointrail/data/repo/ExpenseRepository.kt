@@ -6,6 +6,7 @@ import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -58,6 +59,9 @@ class ExpenseRepository(
 
     override fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money> =
         dao.observeTotalBetween(from, to).map { Money(it) }
+
+    override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
+        dao.observeBetween(from, to).first().map { it.toDomain() }
 
     fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> {
         val from = month.atDay(1).atStartOfDay()

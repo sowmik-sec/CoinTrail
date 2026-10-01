@@ -4,8 +4,8 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Any date range can be exported and saved anywhere via the document picker
-- [ ] Columns are exactly `date,time,amount_taka,category,payment_method,note` with ISO date/time, plain-dot decimal amounts, UTF-8 encoding
-- [ ] Only non-deleted expenses inside the range are exported
+- [x] Any date range can be exported and saved anywhere via the document picker
+- [x] Columns are exactly `date,time,amount_taka,category,payment_method,note` with ISO date/time, plain-dot decimal amounts, UTF-8 encoding
+- [x] Only non-deleted expenses inside the range are exported

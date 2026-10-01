@@ -25,12 +25,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsRoute(
     onManage: (CatalogKind) -> Unit,
+    onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsScreen(
         onManageCategories = { onManage(CatalogKind.CATEGORIES) },
         onManagePaymentMethods = { onManage(CatalogKind.PAYMENT_METHODS) },
+        onExportCsv = onExportCsv,
         onClose = onClose,
         modifier = modifier,
     )
@@ -41,6 +43,7 @@ fun SettingsRoute(
 fun SettingsScreen(
     onManageCategories: () -> Unit,
     onManagePaymentMethods: () -> Unit,
+    onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -61,6 +64,8 @@ fun SettingsScreen(
             SettingsRow(label = CatalogKind.CATEGORIES.title, onClick = onManageCategories)
             HorizontalDivider()
             SettingsRow(label = CatalogKind.PAYMENT_METHODS.title, onClick = onManagePaymentMethods)
+            HorizontalDivider()
+            SettingsRow(label = "Export CSV", onClick = onExportCsv)
         }
     }
 }
