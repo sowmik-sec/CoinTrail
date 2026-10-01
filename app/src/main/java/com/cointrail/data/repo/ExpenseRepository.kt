@@ -15,9 +15,9 @@ import java.util.UUID
 class ExpenseRepository(
     private val dao: ExpenseDao,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) {
+) : ExpenseStore {
 
-    suspend fun add(
+    override suspend fun add(
         amount: Money,
         categoryId: String,
         note: String?,
@@ -47,10 +47,10 @@ class ExpenseRepository(
         dao.softDelete(id, now())
     }
 
-    fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>> =
+    override fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>> =
         dao.observeBetween(from, to).map { rows -> rows.map { it.toDomain() } }
 
-    fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money> =
+    override fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money> =
         dao.observeTotalBetween(from, to).map { Money(it) }
 
     fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> {

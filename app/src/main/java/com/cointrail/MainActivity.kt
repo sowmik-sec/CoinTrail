@@ -3,21 +3,19 @@ package com.cointrail
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.cointrail.ui.CoinTrailApp
+import com.cointrail.ui.theme.CoinTrailTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val container = (application as CoinTrailApplication).container
+        lifecycleScope.launch { container.seedDefaults() }
         setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("CoinTrail")
-                }
+            CoinTrailTheme {
+                CoinTrailApp(container = container)
             }
         }
     }

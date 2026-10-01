@@ -19,9 +19,9 @@ import java.util.UUID
 class CategoryRepository(
     private val dao: CategoryDao,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) {
+) : CategoryStore {
 
-    fun observeAll(): Flow<List<Category>> =
+    override fun observeAll(): Flow<List<Category>> =
         dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     suspend fun ensureSeeded() {
@@ -53,9 +53,9 @@ class CategoryRepository(
 class PaymentMethodRepository(
     private val dao: PaymentMethodDao,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) {
+) : PaymentMethodStore {
 
-    fun observeAll(): Flow<List<PaymentMethod>> =
+    override fun observeAll(): Flow<List<PaymentMethod>> =
         dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     suspend fun ensureSeeded() {

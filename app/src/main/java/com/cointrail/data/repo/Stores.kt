@@ -1,0 +1,37 @@
+package com.cointrail.data.repo
+
+import com.cointrail.core.Money
+import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.Expense
+import com.cointrail.domain.model.PaymentMethod
+import kotlinx.coroutines.flow.Flow
+import java.time.LocalDateTime
+
+/**
+ * Ports the UI layer talks to. They expose only the operations a screen needs, so screens can be
+ * tested against tiny in-memory fakes instead of a full Room database.
+ */
+interface ExpenseStore {
+
+    suspend fun add(
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        occurredAt: LocalDateTime,
+    ): String
+
+    fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>>
+
+    fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money>
+}
+
+interface CategoryStore {
+
+    fun observeAll(): Flow<List<Category>>
+}
+
+interface PaymentMethodStore {
+
+    fun observeAll(): Flow<List<PaymentMethod>>
+}
