@@ -1,7 +1,9 @@
 package com.cointrail.data.repo
 
 import com.cointrail.core.Money
+import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +37,9 @@ interface ExpenseStore {
 
     fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money>
 
+    /** A live per-category breakdown of live expenses in `[from, to)`, ordered by total desc. */
+    fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>>
+
     /** A one-shot snapshot of live expenses in `[from, to)`, for the CSV export. */
     suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense>
 }
@@ -61,4 +66,15 @@ interface PaymentMethodStore {
 
     /** Hides or shows the payment method; hidden ones disappear from pickers but keep their history. */
     suspend fun setHidden(id: String, hidden: Boolean)
+}
+
+interface BudgetStore {
+
+    fun observeAll(): Flow<List<Budget>>
+
+    /** Sets (or replaces) the monthly limit for a scope; `categoryId` null is the overall budget. */
+    suspend fun set(categoryId: String?, monthlyLimit: Money): String
+
+    /** Clears a budget; the row is tombstoned so sync can propagate the removal. */
+    suspend fun clear(id: String)
 }

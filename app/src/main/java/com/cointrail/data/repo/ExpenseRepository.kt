@@ -70,7 +70,7 @@ class ExpenseRepository(
             .map { rows -> rows.map { DailyTotal(LocalDate.parse(it.day), Money(it.totalPaisa)) } }
     }
 
-    fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>> =
+    override fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>> =
         dao.observeCategoryTotals(from, to)
             .map { rows -> rows.map { CategoryTotal(it.categoryId, Money(it.totalPaisa)) } }
 

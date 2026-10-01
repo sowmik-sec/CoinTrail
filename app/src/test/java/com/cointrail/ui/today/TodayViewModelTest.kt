@@ -1,14 +1,22 @@
 package com.cointrail.ui.today
 
 import com.cointrail.core.Money
+import com.cointrail.data.alerts.BudgetAlertTracker
+import com.cointrail.domain.budget.BudgetStatus
+import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.budget.BudgetAlertLevel
+import com.cointrail.testing.FakeBudgetAlertStore
+import com.cointrail.testing.FakeBudgetNotifier
+import com.cointrail.testing.FakeBudgetStore
 import com.cointrail.testing.FakeCategoryStore
 import com.cointrail.testing.FakeExpenseStore
 import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -17,6 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModelTest {
@@ -25,6 +34,7 @@ class TodayViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val today: LocalDate = LocalDate.of(2026, 10, 5)
+    private val month: YearMonth = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
 
     private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
@@ -48,11 +58,24 @@ class TodayViewModelTest {
         updatedAt = at,
     )
 
-    private fun viewModel(store: FakeExpenseStore) = TodayViewModel(
+    private fun budget(id: String, categoryId: String?, paisa: Long) =
+        Budget(id = id, categoryId = categoryId, monthlyLimit = Money(paisa), updatedAt = noon)
+
+    private fun viewModel(
+        store: FakeExpenseStore,
+        budgets: FakeBudgetStore = FakeBudgetStore(),
+        alertStore: FakeBudgetAlertStore = FakeBudgetAlertStore(),
+        notifier: FakeBudgetNotifier = FakeBudgetNotifier(),
+        categories: FakeCategoryStore = FakeCategoryStore(listOf(food)),
+        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
+    ) = TodayViewModel(
         expenses = store,
-        categories = FakeCategoryStore(listOf(food)),
-        paymentMethods = FakePaymentMethodStore(listOf(cash)),
-    ) { today }
+        categories = categories,
+        paymentMethods = paymentMethods,
+        budgets = budgets,
+        budgetAlerts = BudgetAlertTracker(alertStore, notifier) { month },
+        today = { today },
+    )
 
     @Test
     fun `lists today's expenses newest first with a running total`() {
@@ -120,11 +143,11 @@ class TodayViewModelTest {
                 paymentMethodId = "pm-cash",
             ),
         )
-        val vm = TodayViewModel(
-            expenses = store,
+        val vm = viewModel(
+            store,
             categories = FakeCategoryStore(listOf(food.copy(isHidden = true))),
             paymentMethods = FakePaymentMethodStore(listOf(cash.copy(isHidden = true))),
-        ) { today }
+        )
 
         val row = vm.state.value.rows.single()
         assertEquals("Food", row.categoryName)
@@ -147,7 +170,10 @@ class TodayViewModelTest {
             expenses = store,
             categories = FakeCategoryStore(listOf(food)),
             paymentMethods = FakePaymentMethodStore(listOf(cash)),
-        ) { currentDay }
+            budgets = FakeBudgetStore(),
+            budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
+            today = { currentDay },
+        )
         assertTrue(vm.state.value.isEmpty)
 
         store.seed(expense("late-night", 5_000, LocalDateTime.of(2026, 10, 6, 0, 30)))
@@ -209,5 +235,98 @@ class TodayViewModelTest {
         assertEquals(listOf("evening"), vm.state.value.rows.map { it.id })
         assertTrue(store.restores.isEmpty())
         assertNull(vm.pendingUndoId.value)
+    }
+
+    @Test
+    fun `there are no budget bars when no budgets are set`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("x", 100, LocalDateTime.of(2026, 10, 5, 8, 0)))
+
+        assertTrue(viewModel(store).state.value.budgets.isEmpty())
+    }
+
+    @Test
+    fun `the overall budget is measured against the whole month`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("in-month", 40_000, LocalDateTime.of(2026, 10, 3, 9, 0)),
+            expense("today", 5_000, LocalDateTime.of(2026, 10, 5, 9, 0)),
+            expense("last-month", 999_999, LocalDateTime.of(2026, 9, 30, 9, 0)),
+        )
+        val budgets = FakeBudgetStore()
+        budgets.seed(budget("overall", null, 100_000))
+
+        val bar = viewModel(store, budgets).state.value.budgets.single()
+
+        assertEquals("Overall", bar.label)
+        assertEquals(Money(45_000), bar.spent)
+        assertEquals(Money(100_000), bar.limit)
+        assertEquals(BudgetStatus.ON_TRACK, bar.status)
+    }
+
+    @Test
+    fun `category budgets are measured against that category's month and come after the overall bar`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("food", 30_000, LocalDateTime.of(2026, 10, 3, 9, 0), categoryId = "preset-food"),
+            expense("rent", 50_000, LocalDateTime.of(2026, 10, 4, 9, 0), categoryId = "preset-rent"),
+        )
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("food-budget", "preset-food", 100_000),
+            budget("overall", null, 200_000),
+        )
+        val categories = FakeCategoryStore(listOf(food, Category(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = noon)))
+
+        val bars = viewModel(store, budgets, categories = categories).state.value.budgets
+
+        assertEquals(listOf("Overall", "Food"), bars.map { it.label })
+        assertEquals(Money(80_000), bars[0].spent)
+        assertEquals(Money(30_000), bars[1].spent)
+    }
+
+    @Test
+    fun `a category budget with no spending yet reads zero`() {
+        val store = FakeExpenseStore()
+        val budgets = FakeBudgetStore()
+        budgets.seed(budget("food-budget", "preset-food", 100_000))
+
+        val bar = viewModel(store, budgets).state.value.budgets.single()
+
+        assertEquals(Money.ZERO, bar.spent)
+        assertEquals(BudgetStatus.ON_TRACK, bar.status)
+    }
+
+    @Test
+    fun `an expense that pushes the month past eighty percent raises one warning`() = runTest(mainDispatcherRule.testDispatcher) {
+        val store = FakeExpenseStore()
+        store.seed(expense("big", 8_500, LocalDateTime.of(2026, 10, 3, 9, 0)))
+        val budgets = FakeBudgetStore()
+        budgets.seed(budget("overall", null, 10_000))
+        val notifier = FakeBudgetNotifier()
+
+        viewModel(store, budgets, notifier = notifier)
+        advanceUntilIdle()
+
+        assertEquals(listOf(BudgetAlertLevel.WARNING), notifier.alerts.map { it.level })
+    }
+
+    @Test
+    fun `spending on raises the warning once and then the exceeded alert`() = runTest(mainDispatcherRule.testDispatcher) {
+        val store = FakeExpenseStore()
+        store.seed(expense("first", 8_500, LocalDateTime.of(2026, 10, 3, 9, 0)))
+        val budgets = FakeBudgetStore()
+        budgets.seed(budget("overall", null, 10_000))
+        val notifier = FakeBudgetNotifier()
+        viewModel(store, budgets, notifier = notifier)
+        advanceUntilIdle()
+
+        store.seed(expense("more", 2_000, LocalDateTime.of(2026, 10, 4, 9, 0)))
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(BudgetAlertLevel.WARNING, BudgetAlertLevel.EXCEEDED),
+            notifier.alerts.map { it.level },
+        )
     }
 }

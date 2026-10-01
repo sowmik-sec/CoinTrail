@@ -21,6 +21,12 @@ val OutlineLight = Color(0xFF6F7975)
 val ErrorLight = Color(0xFFBA1A1A)
 val OnErrorLight = Color(0xFFFFFFFF)
 
+// Amber - the budget "warning" step between on-track teal and over-budget red.
+val Amber40 = Color(0xFF8A5300)
+val OnAmberLight = Color(0xFFFFFFFF)
+val AmberContainerLight = Color(0xFFFFDDB3)
+val OnAmberContainerLight = Color(0xFF2C1600)
+
 // Dark
 val Teal80 = Color(0xFF4DB6AC)
 val OnTealDark = Color(0xFF00382F)
@@ -36,3 +42,9 @@ val OnSurfaceVariantDark = Color(0xFFBFC9C3)
 val OutlineDark = Color(0xFF89938E)
 val ErrorDark = Color(0xFFFFB4AB)
 val OnErrorDark = Color(0xFF690005)
+
+// Amber - the budget "warning" step between on-track teal and over-budget red.
+val Amber80 = Color(0xFFFFB951)
+val OnAmberDark = Color(0xFF4A2800)
+val AmberContainerDark = Color(0xFF6A3C00)
+val OnAmberContainerDark = Color(0xFFFFDDB3)

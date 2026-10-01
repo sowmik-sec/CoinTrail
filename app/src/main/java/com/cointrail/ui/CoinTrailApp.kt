@@ -11,6 +11,7 @@ import com.cointrail.di.AppContainer
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
 import com.cointrail.ui.quickadd.QuickAddRoute
+import com.cointrail.ui.settings.BudgetSettingsRoute
 import com.cointrail.ui.settings.CatalogKind
 import com.cointrail.ui.settings.ManageCatalogRoute
 import com.cointrail.ui.settings.SettingsRoute
@@ -25,6 +26,7 @@ fun CoinTrailApp(container: AppContainer, modifier: Modifier = Modifier) {
     var showQuickAdd by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showBudgets by rememberSaveable { mutableStateOf(false) }
     var showExport by rememberSaveable { mutableStateOf(false) }
     var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
     val editId = editingId
@@ -69,10 +71,20 @@ fun CoinTrailApp(container: AppContainer, modifier: Modifier = Modifier) {
             )
         }
 
+        showBudgets -> {
+            BackHandler { showBudgets = false }
+            BudgetSettingsRoute(
+                container = container,
+                onDone = { showBudgets = false },
+                modifier = modifier,
+            )
+        }
+
         showSettings -> {
             BackHandler { showSettings = false }
             SettingsRoute(
                 onManage = { managingKind = it },
+                onBudgets = { showBudgets = true },
                 onExportCsv = { showExport = true },
                 onClose = { showSettings = false },
                 modifier = modifier,

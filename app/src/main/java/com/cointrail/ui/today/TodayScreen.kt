@@ -24,6 +24,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -50,6 +51,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
+import com.cointrail.domain.budget.BudgetProgress
+import com.cointrail.domain.budget.BudgetStatus
 
 @Composable
 fun TodayRoute(
@@ -90,6 +93,8 @@ private fun todayViewModelFactory(container: AppContainer) = viewModelFactory {
             expenses = container.expenses,
             categories = container.categories,
             paymentMethods = container.paymentMethods,
+            budgets = container.budgets,
+            budgetAlerts = container.budgetAlerts,
         )
     }
 }
@@ -126,6 +131,10 @@ fun TodayScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             TodayTotal(state.total)
+            if (state.budgets.isNotEmpty()) {
+                HorizontalDivider()
+                BudgetProgressSection(state.budgets)
+            }
             HorizontalDivider()
             if (state.isEmpty) {
                 EmptyToday(modifier = Modifier.fillMaxSize())
@@ -199,6 +208,53 @@ private fun TodayTotal(total: Money) {
             text = total.format(),
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun BudgetProgressSection(budgets: List<BudgetProgress>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "This month's budgets",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        budgets.forEach { BudgetBar(it) }
+    }
+}
+
+@Composable
+private fun BudgetBar(progress: BudgetProgress) {
+    val barColor = when (progress.status) {
+        BudgetStatus.ON_TRACK -> MaterialTheme.colorScheme.primary
+        BudgetStatus.WARNING -> MaterialTheme.colorScheme.tertiary
+        BudgetStatus.EXCEEDED -> MaterialTheme.colorScheme.error
+    }
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = progress.label,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "${progress.spent.format()} / ${progress.limit.format()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { (progress.percent / 100f).coerceIn(0f, 1f) },
+            color = barColor,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth().height(8.dp),
         )
     }
 }

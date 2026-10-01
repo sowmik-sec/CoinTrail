@@ -4,9 +4,9 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Overall and per-category monthly budgets can be set, edited, and cleared in settings
-- [ ] Today shows overall and per-category progress bars for the current month
-- [ ] Crossing 80% fires one warning notification per budget per month; crossing 100% one exceeded notification per budget per month
-- [ ] Threshold alerts re-arm at the start of each month
+- [x] Overall and per-category monthly budgets can be set, edited, and cleared in settings
+- [x] Today shows overall and per-category progress bars for the current month
+- [x] Crossing 80% fires one warning notification per budget per month; crossing 100% one exceeded notification per budget per month
+- [x] Threshold alerts re-arm at the start of each month

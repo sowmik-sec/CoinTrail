@@ -87,12 +87,12 @@ class PaymentMethodRepository(
 class BudgetRepository(
     private val dao: BudgetDao,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) {
+) : BudgetStore {
 
-    fun observeAll(): Flow<List<Budget>> =
+    override fun observeAll(): Flow<List<Budget>> =
         dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    suspend fun set(categoryId: String?, monthlyLimit: Money): String {
+    override suspend fun set(categoryId: String?, monthlyLimit: Money): String {
         val scopeKey = categoryId ?: BudgetEntity.OVERALL
         val existing = dao.byScopeKey(scopeKey)
         val budget = Budget(
@@ -105,7 +105,7 @@ class BudgetRepository(
         return budget.id
     }
 
-    suspend fun clear(id: String) {
+    override suspend fun clear(id: String) {
         dao.softDelete(id, now())
     }
 

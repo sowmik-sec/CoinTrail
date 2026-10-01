@@ -1,16 +1,24 @@
 package com.cointrail.testing
 
 import com.cointrail.core.Money
+import com.cointrail.data.alerts.BudgetAlertStore
+import com.cointrail.data.alerts.BudgetNotifier
+import com.cointrail.data.repo.BudgetStore
 import com.cointrail.data.repo.CategoryStore
 import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
+import com.cointrail.domain.budget.BudgetAlert
+import com.cointrail.domain.budget.BudgetAlertKey
+import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.util.UUID
 
 data class AddCall(
@@ -87,6 +95,16 @@ class FakeExpenseStore : ExpenseStore {
                 .fold(Money.ZERO) { acc, expense -> acc + expense.amount }
         }
 
+    override fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>> =
+        all.map { expenses ->
+            expenses.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
+                .groupBy { it.categoryId }
+                .map { (categoryId, list) ->
+                    CategoryTotal(categoryId, list.fold(Money.ZERO) { acc, expense -> acc + expense.amount })
+                }
+                .sortedByDescending { it.total.paisa }
+        }
+
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
         all.value.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
             .sortedByDescending { it.occurredAt }
@@ -145,5 +163,54 @@ class FakePaymentMethodStore(initial: List<PaymentMethod> = emptyList()) : Payme
     override suspend fun setHidden(id: String, hidden: Boolean) {
         hiddenChanges += id to hidden
         paymentMethods.value = paymentMethods.value.map { if (it.id == id) it.copy(isHidden = hidden) else it }
+    }
+}
+
+class FakeBudgetStore : BudgetStore {
+
+    private val budgets = MutableStateFlow<List<Budget>>(emptyList())
+
+    val sets: MutableList<Pair<String?, Money>> = mutableListOf()
+    val clears: MutableList<String> = mutableListOf()
+
+    fun seed(vararg items: Budget) {
+        budgets.value = budgets.value + items
+    }
+
+    override fun observeAll(): Flow<List<Budget>> = budgets
+
+    override suspend fun set(categoryId: String?, monthlyLimit: Money): String {
+        sets += categoryId to monthlyLimit
+        val existing = budgets.value.firstOrNull { it.categoryId == categoryId }
+        val id = existing?.id ?: "budget-${sets.size}"
+        budgets.value = budgets.value.filterNot { it.categoryId == categoryId } +
+            Budget(id = id, categoryId = categoryId, monthlyLimit = monthlyLimit, updatedAt = LocalDateTime.now())
+        return id
+    }
+
+    override suspend fun clear(id: String) {
+        clears += id
+        budgets.value = budgets.value.filterNot { it.id == id }
+    }
+}
+
+class FakeBudgetAlertStore : BudgetAlertStore {
+
+    private val fired = mutableMapOf<YearMonth, MutableSet<BudgetAlertKey>>()
+
+    override suspend fun firedFor(month: YearMonth): Set<BudgetAlertKey> = fired[month]?.toSet() ?: emptySet()
+
+    override suspend fun markFired(month: YearMonth, keys: Set<BudgetAlertKey>) {
+        fired.getOrPut(month) { mutableSetOf() } += keys
+    }
+}
+
+class FakeBudgetNotifier(private val delivers: Boolean = true) : BudgetNotifier {
+
+    val alerts: MutableList<BudgetAlert> = mutableListOf()
+
+    override fun notify(alert: BudgetAlert): Boolean {
+        alerts += alert
+        return delivers
     }
 }
