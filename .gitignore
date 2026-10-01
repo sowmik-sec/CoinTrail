@@ -3,6 +3,7 @@
 build/
 local.properties
 .idea/
+.commandcode/settings.json
 .DS_Store
 captures/
 .externalNativeBuild/

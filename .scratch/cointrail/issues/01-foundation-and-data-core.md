@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Unit test suite green covering money math/format/parsing, model validation, DAO behavior (incl. tombstones, daily and per-category totals), repositories, and preset seeding
-- [ ] Money is integer paisa everywhere; no floating point in any money path
-- [ ] Preset categories and payment methods use the stable IDs from the spec and seed exactly once
-- [ ] Database instances are created from an account key; the "local" namespace is used when no Google account is signed in
-- [ ] Schema v1 is exported and committed for future migrations
+- [x] Unit test suite green covering money math/format/parsing, model validation, DAO behavior (incl. tombstones, daily and per-category totals), repositories, and preset seeding
+- [x] Money is integer paisa everywhere; no floating point in any money path
+- [x] Preset categories and payment methods use the stable IDs from the spec and seed exactly once
+- [x] Database instances are created from an account key; the "local" namespace is used when no Google account is signed in
+- [x] Schema v1 is exported and committed for future migrations
