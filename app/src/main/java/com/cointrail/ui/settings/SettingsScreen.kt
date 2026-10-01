@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 fun SettingsRoute(
     onManage: (CatalogKind) -> Unit,
     onBudgets: () -> Unit,
+    onReminder: () -> Unit,
     onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -34,6 +35,7 @@ fun SettingsRoute(
         onManageCategories = { onManage(CatalogKind.CATEGORIES) },
         onManagePaymentMethods = { onManage(CatalogKind.PAYMENT_METHODS) },
         onBudgets = onBudgets,
+        onReminder = onReminder,
         onExportCsv = onExportCsv,
         onClose = onClose,
         modifier = modifier,
@@ -46,6 +48,7 @@ fun SettingsScreen(
     onManageCategories: () -> Unit,
     onManagePaymentMethods: () -> Unit,
     onBudgets: () -> Unit,
+    onReminder: () -> Unit,
     onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -69,6 +72,8 @@ fun SettingsScreen(
             SettingsRow(label = CatalogKind.PAYMENT_METHODS.title, onClick = onManagePaymentMethods)
             HorizontalDivider()
             SettingsRow(label = "Budgets", onClick = onBudgets)
+            HorizontalDivider()
+            SettingsRow(label = "Daily reminder", onClick = onReminder)
             HorizontalDivider()
             SettingsRow(label = "Export CSV", onClick = onExportCsv)
         }

@@ -60,6 +60,9 @@ class ExpenseRepository(
     override fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money> =
         dao.observeTotalBetween(from, to).map { Money(it) }
 
+    /** Counts live expenses in `[from, to)`, used by the daily reminder to tell if the day is logged. */
+    suspend fun countBetween(from: LocalDateTime, to: LocalDateTime): Int = dao.countBetween(from, to)
+
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
         dao.observeBetween(from, to).first().map { it.toDomain() }
 

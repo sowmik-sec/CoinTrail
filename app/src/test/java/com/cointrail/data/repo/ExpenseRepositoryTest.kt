@@ -144,6 +144,18 @@ class ExpenseRepositoryTest {
     }
 
     @Test
+    fun `count between counts only live expenses in the range`() = runBlocking {
+        repo.add(Money(100), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 9, 0))
+        repo.add(Money(250), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 20, 0))
+        repo.add(Money(400), "preset-transport", null, null, LocalDateTime.of(2026, 10, 4, 8, 0))
+        val deleted = repo.add(Money(500), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 12, 0))
+        repo.delete(deleted)
+
+        assertEquals(2, repo.countBetween(dayStart, dayEnd))
+        assertEquals(0, repo.countBetween(dayEnd, dayEnd.plusDays(1)))
+    }
+
+    @Test
     fun `category totals sum per category ordered by total desc`() = runBlocking {
         repo.add(Money(100), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 9, 0))
         repo.add(Money(250), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 10, 0))

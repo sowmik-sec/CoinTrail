@@ -2,6 +2,7 @@ package com.cointrail.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -14,22 +15,37 @@ import com.cointrail.ui.quickadd.QuickAddRoute
 import com.cointrail.ui.settings.BudgetSettingsRoute
 import com.cointrail.ui.settings.CatalogKind
 import com.cointrail.ui.settings.ManageCatalogRoute
+import com.cointrail.ui.settings.ReminderSettingsRoute
 import com.cointrail.ui.settings.SettingsRoute
 import com.cointrail.ui.today.TodayRoute
 
 /**
  * Root of the app's flow: Today (the everyday screen), quick-add, edit-expense and settings.
- * The daily reminder deep-links into quick-add later (Plan 4); for now the FAB is the way in.
+ * Tapping the daily reminder notification arrives here with [startInQuickAdd] set, which opens
+ * quick-add directly (SPEC §6.6).
  */
 @Composable
-fun CoinTrailApp(container: AppContainer, modifier: Modifier = Modifier) {
+fun CoinTrailApp(
+    container: AppContainer,
+    startInQuickAdd: Boolean = false,
+    onStartInQuickAddConsumed: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     var showQuickAdd by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showBudgets by rememberSaveable { mutableStateOf(false) }
+    var showReminder by rememberSaveable { mutableStateOf(false) }
     var showExport by rememberSaveable { mutableStateOf(false) }
     var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
     val editId = editingId
+
+    LaunchedEffect(startInQuickAdd) {
+        if (startInQuickAdd) {
+            showQuickAdd = true
+            onStartInQuickAddConsumed()
+        }
+    }
 
     when {
         showQuickAdd -> {
@@ -80,11 +96,21 @@ fun CoinTrailApp(container: AppContainer, modifier: Modifier = Modifier) {
             )
         }
 
+        showReminder -> {
+            BackHandler { showReminder = false }
+            ReminderSettingsRoute(
+                container = container,
+                onDone = { showReminder = false },
+                modifier = modifier,
+            )
+        }
+
         showSettings -> {
             BackHandler { showSettings = false }
             SettingsRoute(
                 onManage = { managingKind = it },
                 onBudgets = { showBudgets = true },
+                onReminder = { showReminder = true },
                 onExportCsv = { showExport = true },
                 onClose = { showSettings = false },
                 modifier = modifier,

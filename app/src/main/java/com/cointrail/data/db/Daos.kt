@@ -29,6 +29,9 @@ interface ExpenseDao {
     @Query("SELECT COALESCE(SUM(amountPaisa), 0) FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to")
     fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Long>
 
+    @Query("SELECT COUNT(*) FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to")
+    suspend fun countBetween(from: LocalDateTime, to: LocalDateTime): Int
+
     @Query("SELECT substr(occurredAt, 1, 10) AS day, SUM(amountPaisa) AS totalPaisa FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to GROUP BY day ORDER BY day ASC")
     fun observeDailyTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<DailyTotalRow>>
 

@@ -5,6 +5,12 @@ import com.cointrail.data.alerts.AndroidBudgetNotifier
 import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.data.alerts.SharedPreferencesBudgetAlertStore
 import com.cointrail.data.db.CoinTrailDatabase
+import com.cointrail.data.reminder.AndroidReminderNotifier
+import com.cointrail.data.reminder.ReminderNotifier
+import com.cointrail.data.reminder.ReminderScheduler
+import com.cointrail.data.reminder.ReminderSettings
+import com.cointrail.data.reminder.SharedPreferencesReminderSettings
+import com.cointrail.data.reminder.WorkManagerReminderScheduler
 import com.cointrail.data.repo.BudgetRepository
 import com.cointrail.data.repo.CategoryRepository
 import com.cointrail.data.repo.ExpenseRepository
@@ -30,6 +36,11 @@ class AppContainer(context: Context) {
         store = SharedPreferencesBudgetAlertStore(appContext),
         notifier = AndroidBudgetNotifier(appContext),
     )
+
+    /** The daily nudge: its configured time, its notification, and the WorkManager job (SPEC §6.6). */
+    val reminderSettings: ReminderSettings = SharedPreferencesReminderSettings(appContext)
+    val reminderNotifier: ReminderNotifier = AndroidReminderNotifier(appContext)
+    val reminderScheduler: ReminderScheduler = WorkManagerReminderScheduler(appContext, reminderSettings)
 
     /** Seeds the preset categories and payment methods exactly once. */
     suspend fun seedDefaults() {

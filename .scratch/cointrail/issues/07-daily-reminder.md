@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The reminder fires daily at the configured time (default 21:30), changeable in settings
-- [ ] It is suppressed when at least one expense is logged that day; days with partial logging still remind
-- [ ] Tapping the notification opens quick-add
-- [ ] It survives device restart and catches up after the phone was off at the scheduled time
-- [ ] The notification permission flow is handled on Android 13+
+- [x] The reminder fires daily at the configured time (default 21:30), changeable in settings
+- [x] It is suppressed when at least one expense is logged that day
+- [x] Tapping the notification opens quick-add
+- [x] It survives device restart and catches up after the phone was off at the scheduled time
+- [x] The notification permission flow is handled on Android 13+

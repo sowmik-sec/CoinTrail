@@ -3,6 +3,8 @@ package com.cointrail.testing
 import com.cointrail.core.Money
 import com.cointrail.data.alerts.BudgetAlertStore
 import com.cointrail.data.alerts.BudgetNotifier
+import com.cointrail.data.reminder.ReminderScheduler
+import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.repo.BudgetStore
 import com.cointrail.data.repo.CategoryStore
 import com.cointrail.data.repo.ExpenseStore
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.YearMonth
 import java.util.UUID
 
@@ -212,5 +215,40 @@ class FakeBudgetNotifier(private val delivers: Boolean = true) : BudgetNotifier 
     override fun notify(alert: BudgetAlert): Boolean {
         alerts += alert
         return delivers
+    }
+}
+
+class FakeReminderSettings(initial: LocalTime = ReminderSettings.DEFAULT_TIME) : ReminderSettings {
+
+    private val state = MutableStateFlow(initial)
+
+    val savedTimes: MutableList<LocalTime> = mutableListOf()
+
+    var notificationPermissionRequested: Boolean = false
+        private set
+
+    override fun observeTime(): Flow<LocalTime> = state
+
+    override suspend fun time(): LocalTime = state.value
+
+    override suspend fun setTime(time: LocalTime) {
+        savedTimes += time
+        state.value = time
+    }
+
+    override suspend fun hasRequestedNotificationPermission(): Boolean = notificationPermissionRequested
+
+    override suspend fun markNotificationPermissionRequested() {
+        notificationPermissionRequested = true
+    }
+}
+
+class FakeReminderScheduler : ReminderScheduler {
+
+    var scheduleCount: Int = 0
+        private set
+
+    override suspend fun scheduleNext() {
+        scheduleCount++
     }
 }
