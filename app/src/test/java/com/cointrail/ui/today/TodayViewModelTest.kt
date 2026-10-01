@@ -109,6 +109,29 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun `hidden categories and payment methods are still shown on past expenses`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense(
+                "x",
+                100,
+                LocalDateTime.of(2026, 10, 5, 8, 0),
+                categoryId = "preset-food",
+                paymentMethodId = "pm-cash",
+            ),
+        )
+        val vm = TodayViewModel(
+            expenses = store,
+            categories = FakeCategoryStore(listOf(food.copy(isHidden = true))),
+            paymentMethods = FakePaymentMethodStore(listOf(cash.copy(isHidden = true))),
+        ) { today }
+
+        val row = vm.state.value.rows.single()
+        assertEquals("Food", row.categoryName)
+        assertEquals("Cash", row.paymentMethodName)
+    }
+
+    @Test
     fun `a day with no expenses is empty with a zero total`() {
         val state = viewModel(FakeExpenseStore()).state.value
 

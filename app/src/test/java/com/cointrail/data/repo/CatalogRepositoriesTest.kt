@@ -100,6 +100,28 @@ class CatalogRepositoriesTest {
     }
 
     @Test
+    fun `a custom category is appended after the presets`() = runBlocking {
+        categories.ensureSeeded()
+
+        categories.add("Pets")
+
+        val all = categories.observeAll().first()
+        assertEquals("Pets", all.last().name)
+        assertEquals(9, all.last().sortOrder)
+    }
+
+    @Test
+    fun `a custom payment method is appended after the presets`() = runBlocking {
+        paymentMethods.ensureSeeded()
+
+        paymentMethods.add("Wallet")
+
+        val all = paymentMethods.observeAll().first()
+        assertEquals("Wallet", all.last().name)
+        assertEquals(4, all.last().sortOrder)
+    }
+
+    @Test
     fun `overall budget round-trips null categoryId and clear tombstones`() = runBlocking {
         budgets.set(null, Money(2_000_000))
 

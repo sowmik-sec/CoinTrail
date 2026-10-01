@@ -18,10 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -54,6 +56,7 @@ fun TodayRoute(
     container: AppContainer,
     onAddClick: () -> Unit,
     onExpenseClick: (String) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: TodayViewModel = viewModel(
@@ -76,6 +79,7 @@ fun TodayRoute(
         onAddClick = onAddClick,
         onExpenseClick = onExpenseClick,
         onDelete = viewModel::delete,
+        onSettingsClick = onSettingsClick,
         modifier = modifier,
     )
 }
@@ -98,11 +102,21 @@ fun TodayScreen(
     onAddClick: () -> Unit,
     onExpenseClick: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text("CoinTrail") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("CoinTrail") },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {

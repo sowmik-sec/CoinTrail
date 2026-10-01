@@ -4,9 +4,9 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Add, rename, and hide work for both categories and payment methods
-- [ ] Hidden items disappear from quick-add and edit pickers but remain attached to old expenses
-- [ ] Preset entries can be hidden but not deleted
-- [ ] Expense history displays hidden items' names correctly
+- [x] Add, rename, and hide work for both categories and payment methods
+- [x] Hidden items disappear from quick-add and edit pickers but remain attached to old expenses
+- [x] Preset entries can be hidden but not deleted
+- [x] Expense history displays hidden items' names correctly

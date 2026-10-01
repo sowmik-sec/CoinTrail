@@ -30,18 +30,18 @@ class CategoryRepository(
         }
     }
 
-    suspend fun add(name: String): String {
-        val category = Category(name = name, updatedAt = now())
+    override suspend fun add(name: String): String {
+        val category = Category(name = name, sortOrder = dao.count(), updatedAt = now())
         dao.upsert(category.toEntity())
         return category.id
     }
 
-    suspend fun rename(id: String, name: String) {
+    override suspend fun rename(id: String, name: String) {
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(name = name, updatedAt = now()).toEntity())
     }
 
-    suspend fun setHidden(id: String, hidden: Boolean) {
+    override suspend fun setHidden(id: String, hidden: Boolean) {
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
     }
@@ -64,18 +64,18 @@ class PaymentMethodRepository(
         }
     }
 
-    suspend fun add(name: String): String {
-        val paymentMethod = PaymentMethod(name = name, updatedAt = now())
+    override suspend fun add(name: String): String {
+        val paymentMethod = PaymentMethod(name = name, sortOrder = dao.count(), updatedAt = now())
         dao.upsert(paymentMethod.toEntity())
         return paymentMethod.id
     }
 
-    suspend fun rename(id: String, name: String) {
+    override suspend fun rename(id: String, name: String) {
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(name = name, updatedAt = now()).toEntity())
     }
 
-    suspend fun setHidden(id: String, hidden: Boolean) {
+    override suspend fun setHidden(id: String, hidden: Boolean) {
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
     }

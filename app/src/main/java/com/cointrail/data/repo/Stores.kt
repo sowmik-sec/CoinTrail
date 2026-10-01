@@ -39,9 +39,23 @@ interface ExpenseStore {
 interface CategoryStore {
 
     fun observeAll(): Flow<List<Category>>
+
+    suspend fun add(name: String): String
+
+    suspend fun rename(id: String, name: String)
+
+    /** Hides or shows the category; hidden ones disappear from pickers but keep their history. */
+    suspend fun setHidden(id: String, hidden: Boolean)
 }
 
 interface PaymentMethodStore {
 
     fun observeAll(): Flow<List<PaymentMethod>>
+
+    suspend fun add(name: String): String
+
+    suspend fun rename(id: String, name: String)
+
+    /** Hides or shows the payment method; hidden ones disappear from pickers but keep their history. */
+    suspend fun setHidden(id: String, hidden: Boolean)
 }
