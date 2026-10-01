@@ -4,10 +4,12 @@ import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
+import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 /**
  * Ports the UI layer talks to. They expose only the operations a screen needs, so screens can be
@@ -39,6 +41,9 @@ interface ExpenseStore {
 
     /** A live per-category breakdown of live expenses in `[from, to)`, ordered by total desc. */
     fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>>
+
+    /** A live per-day total for the live expenses of [month], for the monthly heatmap. */
+    fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>>
 
     /** A one-shot snapshot of live expenses in `[from, to)`, for the CSV export. */
     suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense>

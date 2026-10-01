@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 Log an expense, see it on Today; 06 Budgets + progress + threshold alerts
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The month view shows a calendar grid where each day cell displays its total with heatmap intensity
-- [ ] Tapping a day opens that day's expense list
-- [ ] Monthly total and per-category breakdown render as horizontal bars with a donut switch
-- [ ] Month-over-month shows the total delta and per-category deltas vs the previous month
-- [ ] Budget progress bars (overall + per category) appear on the monthly screen
+- [x] The month view shows a calendar grid where each day cell displays its total with heatmap intensity
+- [x] Tapping a day opens that day's expense list
+- [x] Monthly total and per-category breakdown render as horizontal bars with a donut switch
+- [x] Month-over-month shows the total delta and per-category deltas vs the previous month
+- [x] Budget progress bars (overall + per category) appear on the monthly screen

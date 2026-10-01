@@ -12,6 +12,7 @@ import com.cointrail.di.AppContainer
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
 import com.cointrail.ui.quickadd.QuickAddRoute
+import com.cointrail.ui.reports.MonthlyReportsRoute
 import com.cointrail.ui.settings.BudgetSettingsRoute
 import com.cointrail.ui.settings.CatalogKind
 import com.cointrail.ui.settings.ManageCatalogRoute
@@ -37,6 +38,7 @@ fun CoinTrailApp(
     var showBudgets by rememberSaveable { mutableStateOf(false) }
     var showReminder by rememberSaveable { mutableStateOf(false) }
     var showExport by rememberSaveable { mutableStateOf(false) }
+    var showReports by rememberSaveable { mutableStateOf(false) }
     var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
     val editId = editingId
 
@@ -105,6 +107,15 @@ fun CoinTrailApp(
             )
         }
 
+        showReports -> {
+            MonthlyReportsRoute(
+                container = container,
+                onExpenseClick = { editingId = it },
+                onClose = { showReports = false },
+                modifier = modifier,
+            )
+        }
+
         showSettings -> {
             BackHandler { showSettings = false }
             SettingsRoute(
@@ -122,6 +133,7 @@ fun CoinTrailApp(
                 container = container,
                 onAddClick = { showQuickAdd = true },
                 onExpenseClick = { editingId = it },
+                onReportsClick = { showReports = true },
                 onSettingsClick = { showSettings = true },
                 modifier = modifier,
             )

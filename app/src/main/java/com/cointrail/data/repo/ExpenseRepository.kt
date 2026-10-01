@@ -66,7 +66,7 @@ class ExpenseRepository(
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
         dao.observeBetween(from, to).first().map { it.toDomain() }
 
-    fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> {
+    override fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> {
         val from = month.atDay(1).atStartOfDay()
         val to = month.plusMonths(1).atDay(1).atStartOfDay()
         return dao.observeDailyTotals(from, to)

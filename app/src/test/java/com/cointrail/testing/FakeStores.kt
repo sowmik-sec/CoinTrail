@@ -14,6 +14,7 @@ import com.cointrail.domain.budget.BudgetAlertKey
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
+import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
@@ -106,6 +107,18 @@ class FakeExpenseStore : ExpenseStore {
                     CategoryTotal(categoryId, list.fold(Money.ZERO) { acc, expense -> acc + expense.amount })
                 }
                 .sortedByDescending { it.total.paisa }
+        }
+
+    override fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> =
+        all.map { expenses ->
+            val from = month.atDay(1).atStartOfDay()
+            val to = month.plusMonths(1).atDay(1).atStartOfDay()
+            expenses.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
+                .groupBy { it.occurredAt.toLocalDate() }
+                .map { (day, list) ->
+                    DailyTotal(day, list.fold(Money.ZERO) { acc, expense -> acc + expense.amount })
+                }
+                .sortedBy { it.day }
         }
 
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =

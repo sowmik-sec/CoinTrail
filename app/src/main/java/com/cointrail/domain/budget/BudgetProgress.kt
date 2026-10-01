@@ -2,6 +2,7 @@ package com.cointrail.domain.budget
 
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
+import com.cointrail.domain.model.Category
 
 /** The label shown for the overall (non-category) budget. */
 const val OVERALL_BUDGET_LABEL = "Overall"
@@ -77,4 +78,34 @@ object BudgetProgressCalculator {
             spent = spent,
         )
     }
+
+    /**
+     * The display-ordered progress bars for a month, shared by Today and the monthly reports screen:
+     * the overall budget first, then category budgets in [categories] order. [categoryNames] resolves
+     * a category budget's label.
+     */
+    fun forMonth(
+        budgets: List<Budget>,
+        categories: List<Category>,
+        overallSpent: Money,
+        spentByCategory: Map<String, Money>,
+        categoryNames: Map<String, String>,
+    ): List<BudgetProgress> {
+        val categoryOrder = categories.withIndex().associate { (index, category) -> category.id to index }
+        return calculate(
+            budgets = orderForDisplay(budgets, categoryOrder),
+            overallSpent = overallSpent,
+            spentByCategory = spentByCategory,
+            labelFor = { categoryId -> categoryId?.let { categoryNames[it] ?: it } ?: OVERALL_BUDGET_LABEL },
+        )
+    }
+
+    /**
+     * Orders budgets for display: the overall budget first, then categories in [categoryOrder],
+     * then any budget whose category is missing from it.
+     */
+    private fun orderForDisplay(budgets: List<Budget>, categoryOrder: Map<String, Int>): List<Budget> =
+        budgets.sortedBy { budget ->
+            budget.categoryId?.let { categoryOrder[it] ?: Int.MAX_VALUE } ?: -1
+        }
 }

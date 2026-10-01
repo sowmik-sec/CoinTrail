@@ -10,8 +10,6 @@ import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.budget.BudgetProgressCalculator
-import com.cointrail.domain.budget.OVERALL_BUDGET_LABEL
-import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.Expense
@@ -94,7 +92,13 @@ class TodayViewModel(
                             time = expense.occurredAt.format(TIME_FORMAT),
                         )
                     },
-                    budgets = budgetProgress(budgetList, categoryList, snapshot, categoryNames),
+                    budgets = BudgetProgressCalculator.forMonth(
+                        budgets = budgetList,
+                        categories = categoryList,
+                        overallSpent = snapshot.monthTotal,
+                        spentByCategory = snapshot.categoryTotals.associate { it.categoryId to it.total },
+                        categoryNames = categoryNames,
+                    ),
                 )
             }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TodayUiState())
@@ -129,25 +133,6 @@ class TodayViewModel(
     /** Called when the undo snackbar is dismissed without action; the deletion stands. */
     fun onUndoDismissed() {
         undoId.value = null
-    }
-
-    private fun budgetProgress(
-        budgetList: List<Budget>,
-        categoryList: List<Category>,
-        snapshot: Snapshot,
-        categoryNames: Map<String, String>,
-    ): List<BudgetProgress> {
-        val spentByCategory = snapshot.categoryTotals.associate { it.categoryId to it.total }
-        val categoryOrder = categoryList.withIndex().associate { (index, category) -> category.id to index }
-        val orderedBudgetList = budgetList.sortedBy { budget ->
-            budget.categoryId?.let { categoryOrder[it] ?: Int.MAX_VALUE } ?: -1
-        }
-        return BudgetProgressCalculator.calculate(
-            budgets = orderedBudgetList,
-            overallSpent = snapshot.monthTotal,
-            spentByCategory = spentByCategory,
-            labelFor = { categoryId -> categoryId?.let { categoryNames[it] ?: it } ?: OVERALL_BUDGET_LABEL },
-        )
     }
 
     private data class Snapshot(
