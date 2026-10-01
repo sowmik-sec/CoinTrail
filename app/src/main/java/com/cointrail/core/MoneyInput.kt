@@ -48,6 +48,13 @@ class MoneyInput private constructor(val text: String) {
 
     companion object {
         fun empty(): MoneyInput = MoneyInput("")
+
+        /** Seeds the entry field from an existing amount, e.g. when editing a logged expense. */
+        fun fromMoney(money: Money): MoneyInput {
+            val taka = money.paisa / 100
+            val paisa = money.paisa % 100
+            return if (paisa == 0L) MoneyInput(taka.toString()) else MoneyInput("$taka.${paisa.toString().padStart(2, '0')}")
+        }
     }
 
     private fun groupThousands(digits: String): String {

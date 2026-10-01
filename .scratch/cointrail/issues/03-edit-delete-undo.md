@@ -4,9 +4,9 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every expense field is editable, including the datetime
-- [ ] Swipe-delete shows an undo snackbar and undo restores the expense fully
-- [ ] After the undo window the expense disappears from all views but remains as a tombstone for sync
-- [ ] There is no visible trash or audit UI
+- [x] Every expense field is editable, including the datetime
+- [x] Swipe-delete shows an undo snackbar and undo restores the expense fully
+- [x] After the undo window the expense disappears from all views but remains as a tombstone for sync
+- [x] There is no visible trash or audit UI

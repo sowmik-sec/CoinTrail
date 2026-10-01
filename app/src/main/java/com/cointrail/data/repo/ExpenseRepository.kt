@@ -39,13 +39,19 @@ class ExpenseRepository(
         return expense.id
     }
 
-    suspend fun update(expense: Expense) {
+    override suspend fun update(expense: Expense) {
         dao.upsert(expense.copy(updatedAt = now()).toEntity())
     }
 
-    suspend fun softDelete(id: String) {
+    override suspend fun delete(id: String) {
         dao.softDelete(id, now())
     }
+
+    override suspend fun restore(id: String) {
+        dao.restore(id, now())
+    }
+
+    override suspend fun findById(id: String): Expense? = dao.byId(id)?.toDomain()
 
     override fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>> =
         dao.observeBetween(from, to).map { rows -> rows.map { it.toDomain() } }

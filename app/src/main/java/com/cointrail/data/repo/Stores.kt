@@ -21,6 +21,16 @@ interface ExpenseStore {
         occurredAt: LocalDateTime,
     ): String
 
+    suspend fun update(expense: Expense)
+
+    /** Tombstones the expense: it disappears from every live view but survives for sync. */
+    suspend fun delete(id: String)
+
+    /** Undoes a [delete], bringing the expense back exactly as it was. */
+    suspend fun restore(id: String)
+
+    suspend fun findById(id: String): Expense?
+
     fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>>
 
     fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money>

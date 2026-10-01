@@ -10,9 +10,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -41,6 +43,10 @@ class TodayViewModel(
 ) : ViewModel() {
 
     private val day = MutableStateFlow(today())
+    private val undoId = MutableStateFlow<String?>(null)
+
+    /** The expense awaiting an undo decision, or null when no delete is pending. */
+    val pendingUndoId: StateFlow<String?> = undoId.asStateFlow()
 
     val state: StateFlow<TodayUiState> = day.flatMapLatest { date ->
         val dayStart = date.atStartOfDay()
@@ -72,6 +78,26 @@ class TodayViewModel(
     /** Re-anchors the screen to the current local day, e.g. when the app returns to the foreground. */
     fun refresh() {
         day.value = today()
+    }
+
+    /** Tombstones the expense and offers an undo window. */
+    fun delete(id: String) {
+        viewModelScope.launch {
+            expenses.delete(id)
+            undoId.value = id
+        }
+    }
+
+    /** Brings back the expense most recently deleted. */
+    fun undoDelete() {
+        val id = undoId.value ?: return
+        undoId.value = null
+        viewModelScope.launch { expenses.restore(id) }
+    }
+
+    /** Called when the undo snackbar is dismissed without action; the deletion stands. */
+    fun onUndoDismissed() {
+        undoId.value = null
     }
 
     private companion object {

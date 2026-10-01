@@ -109,4 +109,30 @@ class MoneyInputTest {
 
         assertEquals("0.5", input.text)
     }
+
+    @Test
+    fun `seeded from money shows whole taka without decimals`() {
+        val input = MoneyInput.fromMoney(Money(125_000))
+
+        assertEquals("1250", input.text)
+        assertEquals("৳1,250", input.display())
+        assertEquals(Money(125_000), input.toMoney())
+    }
+
+    @Test
+    fun `seeded from money keeps the paisa part`() {
+        val input = MoneyInput.fromMoney(Money(125_050))
+
+        assertEquals("1250.50", input.text)
+        assertEquals("৳1,250.50", input.display())
+        assertEquals(Money(125_050), input.toMoney())
+    }
+
+    @Test
+    fun `seeded from money pads a single paisa digit`() {
+        val input = MoneyInput.fromMoney(Money(105))
+
+        assertEquals("1.05", input.text)
+        assertEquals(Money(105), input.toMoney())
+    }
 }

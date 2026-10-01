@@ -1,5 +1,7 @@
 package com.cointrail.ui.today
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,15 +17,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,6 +53,7 @@ import com.cointrail.di.AppContainer
 fun TodayRoute(
     container: AppContainer,
     onAddClick: () -> Unit,
+    onExpenseClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: TodayViewModel = viewModel(
@@ -50,7 +61,23 @@ fun TodayRoute(
     )
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.state.collectAsState()
-    TodayScreen(state = state, onAddClick = onAddClick, modifier = modifier)
+    val pendingUndoId by viewModel.pendingUndoId.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(pendingUndoId) {
+        if (pendingUndoId == null) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(message = "Expense deleted", actionLabel = "Undo")
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete() else viewModel.onUndoDismissed()
+    }
+
+    TodayScreen(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onAddClick = onAddClick,
+        onExpenseClick = onExpenseClick,
+        onDelete = viewModel::delete,
+        modifier = modifier,
+    )
 }
 
 private fun todayViewModelFactory(container: AppContainer) = viewModelFactory {
@@ -67,12 +94,16 @@ private fun todayViewModelFactory(container: AppContainer) = viewModelFactory {
 @Composable
 fun TodayScreen(
     state: TodayUiState,
+    snackbarHostState: SnackbarHostState,
     onAddClick: () -> Unit,
+    onExpenseClick: (String) -> Unit,
+    onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { TopAppBar(title = { Text("CoinTrail") }) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
                 Icon(Icons.Filled.Add, contentDescription = "Add expense")
@@ -90,12 +121,54 @@ fun TodayScreen(
                     contentPadding = PaddingValues(bottom = 96.dp),
                 ) {
                     items(state.rows, key = { it.id }) { row ->
-                        TodayRow(row)
+                        SwipeToDeleteRow(row = row, onClick = { onExpenseClick(row.id) }, onDelete = onDelete)
                         HorizontalDivider()
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SwipeToDeleteRow(
+    row: TodayExpenseRow,
+    onClick: () -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDelete(row.id)
+                true
+            } else {
+                false
+            }
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = { DeleteBackground() },
+    ) {
+        TodayRow(row, onClick)
+    }
+}
+
+@Composable
+private fun DeleteBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Icon(
+            Icons.Filled.Delete,
+            contentDescription = "Delete",
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+        )
     }
 }
 
@@ -117,9 +190,12 @@ private fun TodayTotal(total: Money) {
 }
 
 @Composable
-private fun TodayRow(row: TodayExpenseRow) {
+private fun TodayRow(row: TodayExpenseRow, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

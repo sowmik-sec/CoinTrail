@@ -40,6 +40,9 @@ interface ExpenseDao {
 
     @Query("UPDATE expenses SET deletedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun softDelete(id: String, now: LocalDateTime)
+
+    @Query("UPDATE expenses SET deletedAt = NULL, updatedAt = :now WHERE id = :id")
+    suspend fun restore(id: String, now: LocalDateTime)
 }
 
 @Dao

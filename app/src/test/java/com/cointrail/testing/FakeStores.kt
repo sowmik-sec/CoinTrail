@@ -23,6 +23,9 @@ data class AddCall(
 class FakeExpenseStore : ExpenseStore {
 
     val calls: MutableList<AddCall> = mutableListOf()
+    val updates: MutableList<Expense> = mutableListOf()
+    val deletes: MutableList<String> = mutableListOf()
+    val restores: MutableList<String> = mutableListOf()
 
     private val all = MutableStateFlow<List<Expense>>(emptyList())
 
@@ -54,15 +57,32 @@ class FakeExpenseStore : ExpenseStore {
         return id
     }
 
+    override suspend fun update(expense: Expense) {
+        updates += expense
+        all.value = all.value.map { if (it.id == expense.id) expense else it }
+    }
+
+    override suspend fun delete(id: String) {
+        deletes += id
+        all.value = all.value.map { if (it.id == id) it.copy(deletedAt = it.updatedAt) else it }
+    }
+
+    override suspend fun restore(id: String) {
+        restores += id
+        all.value = all.value.map { if (it.id == id) it.copy(deletedAt = null) else it }
+    }
+
+    override suspend fun findById(id: String): Expense? = all.value.firstOrNull { it.id == id }
+
     override fun observeBetween(from: LocalDateTime, to: LocalDateTime): Flow<List<Expense>> =
         all.map { expenses ->
-            expenses.filter { it.occurredAt >= from && it.occurredAt < to }
+            expenses.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
                 .sortedByDescending { it.occurredAt }
         }
 
     override fun observeTotalBetween(from: LocalDateTime, to: LocalDateTime): Flow<Money> =
         all.map { expenses ->
-            expenses.filter { it.occurredAt >= from && it.occurredAt < to }
+            expenses.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
                 .fold(Money.ZERO) { acc, expense -> acc + expense.amount }
         }
 }

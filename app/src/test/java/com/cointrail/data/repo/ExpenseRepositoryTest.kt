@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -69,12 +70,61 @@ class ExpenseRepositoryTest {
     fun `soft delete hides row but keeps tombstone for sync`() = runBlocking {
         val id = repo.add(Money(100), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 13, 0))
 
-        repo.softDelete(id)
+        repo.delete(id)
 
         assertTrue(repo.observeBetween(dayStart, dayEnd).first().isEmpty())
         val changes = repo.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
         assertEquals(1, changes.size)
         assertNotNull(changes.first().deletedAt)
+    }
+
+    @Test
+    fun `restore undoes a delete and brings the row back untouched`() = runBlocking {
+        val id = repo.add(Money(100), "preset-food", "lunch", "pm-cash", LocalDateTime.of(2026, 10, 5, 13, 0))
+        repo.delete(id)
+
+        repo.restore(id)
+
+        val day = repo.observeBetween(dayStart, dayEnd).first()
+        assertEquals(listOf(id), day.map { it.id })
+        assertEquals(Money(100), repo.observeTotalBetween(dayStart, dayEnd).first())
+        assertEquals("lunch", day.single().note)
+        assertEquals("pm-cash", day.single().paymentMethodId)
+        assertNull(repo.findById(id)?.deletedAt)
+    }
+
+    @Test
+    fun `update edits every field including the datetime`() = runBlocking {
+        val id = repo.add(Money(100), "preset-food", "old", "pm-cash", LocalDateTime.of(2026, 10, 5, 13, 0))
+        val original = repo.findById(id)!!
+        val moved = LocalDateTime.of(2026, 10, 2, 9, 30)
+
+        repo.update(
+            original.copy(
+                amount = Money(250),
+                categoryId = "preset-transport",
+                note = "new",
+                paymentMethodId = null,
+                occurredAt = moved,
+            )
+        )
+
+        val edited = repo.findById(id)!!
+        assertEquals(Money(250), edited.amount)
+        assertEquals("preset-transport", edited.categoryId)
+        assertEquals("new", edited.note)
+        assertNull(edited.paymentMethodId)
+        assertEquals(moved, edited.occurredAt)
+        assertTrue(repo.observeBetween(dayStart, dayEnd).first().isEmpty())
+    }
+
+    @Test
+    fun `find by id returns the expense or null`() = runBlocking {
+        val id = repo.add(Money(100), "preset-food", "note", null, LocalDateTime.of(2026, 10, 5, 13, 0))
+
+        assertEquals(Money(100), repo.findById(id)?.amount)
+        assertEquals("note", repo.findById(id)?.note)
+        assertNull(repo.findById("missing"))
     }
 
     @Test
