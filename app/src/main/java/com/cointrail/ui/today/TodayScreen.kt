@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -179,7 +180,9 @@ private fun SwipeToDeleteRow(
         enableDismissFromStartToEnd = false,
         backgroundContent = { DeleteBackground() },
     ) {
-        TodayRow(row, onClick)
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            TodayRow(row, onClick)
+        }
     }
 }
 
