@@ -10,6 +10,10 @@ import com.cointrail.data.account.SharedPreferencesAccountSession
 import com.cointrail.data.alerts.AndroidBudgetNotifier
 import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.data.alerts.SharedPreferencesBudgetAlertStore
+import com.cointrail.data.backup.BackupManager
+import com.cointrail.data.backup.BackupScheduler
+import com.cointrail.data.backup.WorkManagerBackupScheduler
+import com.cointrail.data.backup.drive.GoogleDriveSnapshotRemoteStore
 import com.cointrail.data.recurring.RecurringExpenseGenerator
 import com.cointrail.data.recurring.RecurringGenerationScheduler
 import com.cointrail.data.recurring.WorkManagerRecurringGenerationScheduler
@@ -73,6 +77,18 @@ class AppContainer(context: Context) {
         settings = syncSettings,
     )
     val syncScheduler: SyncScheduler = WorkManagerSyncScheduler(appContext)
+
+    /**
+     * Snapshots, restore and JSON export/import (SPEC §7). Snapshots live in the same Drive app
+     * folder as the sync journal, keyed to the same signed-in account; JSON export/import works in
+     * any namespace, account or not.
+     */
+    val backup: BackupManager = BackupManager(
+        account = accounts.account,
+        localStore = { accounts.current.syncStore },
+        snapshotStore = { account -> GoogleDriveSnapshotRemoteStore(GoogleDriveAccessTokens(appContext, account)) },
+    )
+    val backupScheduler: BackupScheduler = WorkManagerBackupScheduler(appContext)
 
     /** Raises the 80%/100% budget notifications, at most once per budget per month (SPEC §6.5). */
     val budgetAlerts: BudgetAlertTracker = BudgetAlertTracker(

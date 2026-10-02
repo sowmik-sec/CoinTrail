@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.cointrail.di.AppContainer
+import com.cointrail.ui.backup.BackupRoute
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
 import com.cointrail.ui.quickadd.QuickAddRoute
@@ -43,6 +44,7 @@ fun CoinTrailApp(
     var showExport by rememberSaveable { mutableStateOf(false) }
     var showReports by rememberSaveable { mutableStateOf(false) }
     var showAccount by rememberSaveable { mutableStateOf(false) }
+    var showBackup by rememberSaveable { mutableStateOf(false) }
     var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
     val editId = editingId
 
@@ -138,6 +140,15 @@ fun CoinTrailApp(
             )
         }
 
+        showBackup -> {
+            BackHandler { showBackup = false }
+            BackupRoute(
+                container = container,
+                onDone = { showBackup = false },
+                modifier = modifier,
+            )
+        }
+
         showSettings -> {
             BackHandler { showSettings = false }
             SettingsRoute(
@@ -146,6 +157,7 @@ fun CoinTrailApp(
                 onReminder = { showReminder = true },
                 onRecurring = { showRecurring = true },
                 onExportCsv = { showExport = true },
+                onBackup = { showBackup = true },
                 onAccount = { showAccount = true },
                 onClose = { showSettings = false },
                 modifier = modifier,

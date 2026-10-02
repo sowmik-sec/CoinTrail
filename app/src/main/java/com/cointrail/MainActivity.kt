@@ -39,6 +39,8 @@ class MainActivity : ComponentActivity() {
         // Keeps the daily reminder armed; also re-establishes the chain after a device restart.
         lifecycleScope.launch { container.reminderScheduler.scheduleNext() }
         lifecycleScope.launch { container.syncScheduler.enqueuePeriodic() }
+        // Keeps the weekly Drive snapshot armed; a no-op until an account is signed in.
+        lifecycleScope.launch { container.backupScheduler.enqueuePeriodic() }
         // Sign-in/out/remove swaps the active database; restart with a fresh ViewModel store so no
         // screen keeps a repository bound to the previous account (SPEC §7).
         lifecycleScope.launch { container.accounts.accountKey.drop(1).collect { restartIntoAccount() } }

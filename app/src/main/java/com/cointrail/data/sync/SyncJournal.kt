@@ -80,11 +80,8 @@ object SyncJournalCodec {
         val root = JSONObject()
             .put("format", FORMAT)
             .put("version", VERSION)
-            .put("expenses", JSONArray(journal.expenses.map(::encodeExpense)))
-            .put("categories", JSONArray(journal.categories.map(::encodeCategory)))
-            .put("paymentMethods", JSONArray(journal.paymentMethods.map(::encodePaymentMethod)))
-            .put("budgets", JSONArray(journal.budgets.map(::encodeBudget)))
-            .put("recurring", JSONArray(journal.recurring.map(::encodeRecurring)))
+        val tables = encodeTables(journal)
+        tables.keys().forEach { key -> root.put(key, tables.get(key)) }
         return root.toString()
     }
 
@@ -94,14 +91,28 @@ object SyncJournalCodec {
         require(format == FORMAT) { "Not a CoinTrail sync journal (format=$format)" }
         val version = root.optInt("version", 0)
         require(version in 1..VERSION) { "Unsupported sync journal version: $version" }
-        return SyncJournal(
-            expenses = root.rows("expenses", ::decodeExpense),
-            categories = root.rows("categories", ::decodeCategory),
-            paymentMethods = root.rows("paymentMethods", ::decodePaymentMethod),
-            budgets = root.rows("budgets", ::decodeBudget),
-            recurring = root.rows("recurring", ::decodeRecurring),
-        )
+        return decodeTables(root)
     }
+
+    /**
+     * The five tables as one JSON object, without any envelope. Shared with [BackupCodec] so the
+     * backup file and the sync journal encode every row identically (SPEC §7).
+     */
+    internal fun encodeTables(journal: SyncJournal): JSONObject = JSONObject()
+        .put("expenses", JSONArray(journal.expenses.map(::encodeExpense)))
+        .put("categories", JSONArray(journal.categories.map(::encodeCategory)))
+        .put("paymentMethods", JSONArray(journal.paymentMethods.map(::encodePaymentMethod)))
+        .put("budgets", JSONArray(journal.budgets.map(::encodeBudget)))
+        .put("recurring", JSONArray(journal.recurring.map(::encodeRecurring)))
+
+    /** Reads the five tables from a JSON object, ignoring unknown tables and defaulting missing ones. */
+    internal fun decodeTables(tables: JSONObject): SyncJournal = SyncJournal(
+        expenses = tables.rows("expenses", ::decodeExpense),
+        categories = tables.rows("categories", ::decodeCategory),
+        paymentMethods = tables.rows("paymentMethods", ::decodePaymentMethod),
+        budgets = tables.rows("budgets", ::decodeBudget),
+        recurring = tables.rows("recurring", ::decodeRecurring),
+    )
 
     private fun encodeExpense(expense: Expense): JSONObject = JSONObject()
         .put("id", expense.id)

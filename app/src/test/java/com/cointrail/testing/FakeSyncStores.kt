@@ -22,6 +22,8 @@ class FakeSyncLocalStore(initial: SyncJournal = SyncJournal.EMPTY) : SyncLocalSt
     var mergeCount: Int = 0
         private set
 
+    override suspend fun read(): SyncJournal = journal
+
     override suspend fun mergeRemote(remote: SyncJournal): SyncJournal {
         mergeCount++
         journal = SyncJournalMerge.merge(journal, remote)

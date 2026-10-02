@@ -4,10 +4,10 @@
 
 **Blocked by:** 11 Drive sync
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Snapshots are written to Drive weekly and on demand via "Backup now"
-- [ ] The app lists available snapshots and restore merges one idempotently (safe on fresh or existing devices, run twice without damage)
-- [ ] Full data can be exported to and imported from a versioned JSON file anywhere via the document picker
-- [ ] The JSON backup format is documented (versioned schema, paisa integers, ISO timestamps) so a future app or a human can parse it
-- [ ] Export → import round-trip is covered by a test asserting identical data
+- [x] Snapshots are written to Drive weekly and on demand via "Backup now"
+- [x] The app lists available snapshots and restore merges one idempotently (safe on fresh or existing devices, run twice without damage)
+- [x] Full data can be exported to and imported from a versioned JSON file anywhere via the document picker
+- [x] The JSON backup format is documented (versioned schema, paisa integers, ISO timestamps) so a future app or a human can parse it
+- [x] Export → import round-trip is covered by a test asserting identical data

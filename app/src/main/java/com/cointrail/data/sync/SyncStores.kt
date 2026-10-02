@@ -22,6 +22,9 @@ interface SyncRemoteStore {
 /** A namespace's full-row local state, exchanged with the remote journal (SPEC §7). */
 interface SyncLocalStore {
 
+    /** This namespace's complete current state, tombstones included, for a backup snapshot. */
+    suspend fun read(): SyncJournal
+
     /**
      * Merges [remote] into this namespace's state in a single transaction and returns the merged
      * journal, which the caller publishes back to the remote. Doing the read, merge and write as

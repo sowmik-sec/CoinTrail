@@ -15,6 +15,8 @@ class RoomSyncLocalStore(
     private val database: CoinTrailDatabase,
 ) : SyncLocalStore {
 
+    override suspend fun read(): SyncJournal = database.withTransaction { readAll() }
+
     override suspend fun mergeRemote(remote: SyncJournal): SyncJournal = database.withTransaction {
         val merged = SyncJournalMerge.merge(readAll(), remote)
         writeAll(merged)
