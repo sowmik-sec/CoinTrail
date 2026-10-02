@@ -1,10 +1,8 @@
 package com.cointrail.ui.reports
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,14 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
@@ -65,7 +59,7 @@ import java.util.Locale
 @Composable
 fun MonthlyReportsRoute(
     container: AppContainer,
-    onExpenseClick: (String) -> Unit,
+    onDayClick: (LocalDate) -> Unit,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -78,9 +72,7 @@ fun MonthlyReportsRoute(
         state = state,
         onPreviousMonth = viewModel::showPreviousMonth,
         onNextMonth = viewModel::showNextMonth,
-        onSelectDay = viewModel::selectDay,
-        onBackFromDay = viewModel::clearSelectedDay,
-        onExpenseClick = onExpenseClick,
+        onSelectDay = onDayClick,
         onClose = onClose,
         modifier = modifier,
     )
@@ -98,9 +90,9 @@ private fun monthlyReportsViewModelFactory(container: AppContainer) = viewModelF
 }
 
 /**
- * The monthly reports screen (SPEC §6.4). It shows the month calendar heatmap, the month total and
- * per-category breakdown, the month-over-month comparison and the budget bars; tapping a day swaps
- * in that day's expense list.
+ * The monthly reports screen (SPEC §6.4): the month calendar heatmap, the month total and
+ * per-category breakdown, the month-over-month comparison and the budget bars; tapping a day
+ * opens the Day screen (SPEC §6.1) for that date.
  */
 @Composable
 fun MonthlyReportsScreen(
@@ -108,32 +100,17 @@ fun MonthlyReportsScreen(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDay: (LocalDate) -> Unit,
-    onBackFromDay: () -> Unit,
-    onExpenseClick: (String) -> Unit,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val selectedDay = state.selectedDay
-    BackHandler { if (selectedDay != null) onBackFromDay() else onClose?.invoke() }
-
-    if (selectedDay != null) {
-        DayExpensesScreen(
-            state = state,
-            day = selectedDay,
-            onBack = onBackFromDay,
-            onExpenseClick = onExpenseClick,
-            modifier = modifier,
-        )
-    } else {
-        MonthOverviewScreen(
-            state = state,
-            onPreviousMonth = onPreviousMonth,
-            onNextMonth = onNextMonth,
-            onSelectDay = onSelectDay,
-            onClose = onClose,
-            modifier = modifier,
-        )
-    }
+    MonthOverviewScreen(
+        state = state,
+        onPreviousMonth = onPreviousMonth,
+        onNextMonth = onNextMonth,
+        onSelectDay = onSelectDay,
+        onClose = onClose,
+        modifier = modifier,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -384,94 +361,6 @@ private fun MonthComparisonSection(state: MonthlyReportsUiState) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DayExpensesScreen(
-    state: MonthlyReportsUiState,
-    day: LocalDate,
-    onBack: () -> Unit,
-    onExpenseClick: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text(day.format(DAY_FORMAT)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(
-                    text = "Spent that day",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = state.dayTotal.format(),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            HorizontalDivider()
-            if (state.dayRows.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No expenses logged that day.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(state.dayRows, key = { it.id }) { row ->
-                        DayExpenseRowItem(row = row, onClick = { onExpenseClick(row.id) })
-                        HorizontalDivider()
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DayExpenseRowItem(row: DayExpenseRow, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = row.categoryName, style = MaterialTheme.typography.titleMedium)
-            val secondary = buildList {
-                add(row.time)
-                row.paymentMethodName?.let { add(it) }
-                row.note?.takeIf { it.isNotBlank() }?.let { add(it) }
-            }.joinToString(" · ")
-            Text(
-                text = secondary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = row.amount.format(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
 @Composable
 private fun deltaColor(delta: Money): Color = when {
     delta.paisa > 0 -> MaterialTheme.colorScheme.error
@@ -486,4 +375,3 @@ private fun formatDelta(delta: Money): String =
 private val CELL_HEIGHT = 56.dp
 private const val DAYS_PER_WEEK = 7
 private val MONTH_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
-private val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH)

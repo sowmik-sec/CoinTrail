@@ -192,53 +192,19 @@ class MonthlyReportsViewModelTest {
     }
 
     @Test
-    fun `selecting a day exposes that day's expenses and total`() {
-        val store = FakeExpenseStore()
-        store.seed(
-            expense("morning", 10_000, LocalDateTime.of(2026, 10, 5, 9, 0)),
-            expense("evening", 25_000, LocalDateTime.of(2026, 10, 5, 20, 30), categoryId = "preset-rent"),
-            expense("other-day", 99_000, LocalDateTime.of(2026, 10, 4, 12, 0)),
-        )
-        val vm = viewModel(store)
-
-        vm.selectDay(LocalDate.of(2026, 10, 5))
-
-        val state = vm.state.value
-        assertEquals(LocalDate.of(2026, 10, 5), state.selectedDay)
-        assertEquals(listOf("evening", "morning"), state.dayRows.map { it.id })
-        assertEquals(Money(35_000), state.dayTotal)
-        assertEquals("Rent", state.dayRows.first().categoryName)
-    }
-
-    @Test
-    fun `no day selected means no day rows`() {
-        val store = FakeExpenseStore()
-        store.seed(expense("x", 100, LocalDateTime.of(2026, 10, 5, 9, 0)))
-
-        val state = viewModel(store).state.value
-
-        assertNull(state.selectedDay)
-        assertTrue(state.dayRows.isEmpty())
-        assertEquals(Money.ZERO, state.dayTotal)
-    }
-
-    @Test
-    fun `moving to the previous month reloads the totals and clears the selected day`() {
+    fun `moving to the previous month reloads the totals`() {
         val store = FakeExpenseStore()
         store.seed(
             expense("oct", 40_000, LocalDateTime.of(2026, 10, 3, 9, 0)),
             expense("sep", 12_000, LocalDateTime.of(2026, 9, 3, 9, 0)),
         )
         val vm = viewModel(store)
-        vm.selectDay(LocalDate.of(2026, 10, 3))
 
         vm.showPreviousMonth()
 
         val state = vm.state.value
         assertEquals(YearMonth.of(2026, 9), state.month)
         assertEquals(Money(12_000), state.total)
-        assertNull(state.selectedDay)
-        assertTrue(state.dayRows.isEmpty())
     }
 
     @Test

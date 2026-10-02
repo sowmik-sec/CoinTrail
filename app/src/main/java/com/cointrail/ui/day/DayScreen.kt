@@ -1,27 +1,22 @@
-package com.cointrail.ui.today
+package com.cointrail.ui.day
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,30 +38,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.components.BudgetProgressSection
+import com.cointrail.ui.components.ExpenseRow
+import com.cointrail.ui.components.ExpenseRowUi
+import com.cointrail.ui.components.timeFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
-fun TodayRoute(
+fun DayRoute(
+    date: LocalDate,
     container: AppContainer,
-    onAddClick: () -> Unit,
     onExpenseClick: (String) -> Unit,
-    onReportsClick: () -> Unit,
-    onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: TodayViewModel = viewModel(
-        factory = remember(container) { todayViewModelFactory(container) },
+    val is24Hour = DateFormat.is24HourFormat(LocalContext.current)
+    val rowTimeFormat = remember(is24Hour) { timeFormat(is24Hour) }
+    val viewModel: DayViewModel = viewModel(
+        factory = remember(container, date, rowTimeFormat) { dayViewModelFactory(container, date, rowTimeFormat) },
     )
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.state.collectAsState()
     val pendingUndoId by viewModel.pendingUndoId.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -77,73 +77,78 @@ fun TodayRoute(
         if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete() else viewModel.onUndoDismissed()
     }
 
-    TodayScreen(
+    DayScreen(
         state = state,
+        isToday = date == LocalDate.now(),
         snackbarHostState = snackbarHostState,
-        onAddClick = onAddClick,
         onExpenseClick = onExpenseClick,
         onDelete = viewModel::delete,
-        onReportsClick = onReportsClick,
-        onSettingsClick = onSettingsClick,
+        onBack = onBack,
+        date = date,
         modifier = modifier,
     )
 }
 
-private fun todayViewModelFactory(container: AppContainer) = viewModelFactory {
+private fun dayViewModelFactory(
+    container: AppContainer,
+    date: LocalDate,
+    timeFormat: DateTimeFormatter,
+) = viewModelFactory {
     initializer {
-        TodayViewModel(
+        DayViewModel(
+            date = date,
             expenses = container.expenses,
             categories = container.categories,
             paymentMethods = container.paymentMethods,
             budgets = container.budgets,
             budgetAlerts = container.budgetAlerts,
+            timeFormat = timeFormat,
         )
     }
 }
 
+/**
+ * The Day screen (SPEC §6.1): one date's expenses newest first with that day's total at top.
+ * "Today" is the Day screen for the current date; other dates are titled with the date. Rows are
+ * swipe-to-delete with an undo snackbar and tap-to-edit.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodayScreen(
-    state: TodayUiState,
+fun DayScreen(
+    state: DayUiState,
+    isToday: Boolean,
+    date: LocalDate,
     snackbarHostState: SnackbarHostState,
-    onAddClick: () -> Unit,
     onExpenseClick: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onReportsClick: () -> Unit,
-    onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("CoinTrail") },
-                actions = {
-                    IconButton(onClick = onReportsClick) {
-                        Icon(Icons.Filled.DateRange, contentDescription = "Monthly reports")
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                title = { Text(if (isToday) "Today" else date.format(DAY_FORMAT)) },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = { onBack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Filled.Add, contentDescription = "Add expense")
-            }
-        },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            TodayTotal(state.total)
+            DayTotal(state.total, isToday)
             if (state.budgets.isNotEmpty()) {
                 HorizontalDivider()
                 BudgetProgressSection("This month's budgets", state.budgets)
             }
             HorizontalDivider()
             if (state.isEmpty) {
-                EmptyToday(modifier = Modifier.fillMaxSize())
+                EmptyDay(isToday, modifier = Modifier.fillMaxSize())
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -161,7 +166,7 @@ fun TodayScreen(
 
 @Composable
 private fun SwipeToDeleteRow(
-    row: TodayExpenseRow,
+    row: ExpenseRowUi,
     onClick: () -> Unit,
     onDelete: (String) -> Unit,
 ) {
@@ -181,7 +186,7 @@ private fun SwipeToDeleteRow(
         backgroundContent = { DeleteBackground() },
     ) {
         Surface(color = MaterialTheme.colorScheme.surface) {
-            TodayRow(row, onClick)
+            ExpenseRow(row, onClick)
         }
     }
 }
@@ -204,10 +209,10 @@ private fun DeleteBackground() {
 }
 
 @Composable
-private fun TodayTotal(total: Money) {
+private fun DayTotal(total: Money, isToday: Boolean) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text(
-            text = "Spent today",
+            text = if (isToday) "Spent today" else "Spent that day",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -221,47 +226,23 @@ private fun TodayTotal(total: Money) {
 }
 
 @Composable
-private fun TodayRow(row: TodayExpenseRow, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = row.categoryName, style = MaterialTheme.typography.titleMedium)
-            val secondary = buildList {
-                add(row.time)
-                row.paymentMethodName?.let { add(it) }
-                row.note?.takeIf { it.isNotBlank() }?.let { add(it) }
-            }.joinToString(" · ")
+private fun EmptyDay(isToday: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.padding(24.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                text = secondary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (isToday) "No expenses yet today" else "No expenses logged that day.",
+                style = MaterialTheme.typography.titleMedium,
             )
+            if (isToday) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tap + to log your first one.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = row.amount.format(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 
-@Composable
-private fun EmptyToday(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(text = "No expenses yet today", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Tap + to log your first one.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
+private val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH)

@@ -1,13 +1,13 @@
-package com.cointrail.ui.today
+package com.cointrail.ui.day
 
 import com.cointrail.core.Money
 import com.cointrail.data.alerts.BudgetAlertTracker
+import com.cointrail.domain.budget.BudgetAlertLevel
 import com.cointrail.domain.budget.BudgetStatus
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
-import com.cointrail.domain.budget.BudgetAlertLevel
 import com.cointrail.testing.FakeBudgetAlertStore
 import com.cointrail.testing.FakeBudgetNotifier
 import com.cointrail.testing.FakeBudgetStore
@@ -26,14 +26,16 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TodayViewModelTest {
+class DayViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val today: LocalDate = LocalDate.of(2026, 10, 5)
+    private val day: LocalDate = LocalDate.of(2026, 10, 5)
     private val month: YearMonth = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
 
@@ -68,17 +70,19 @@ class TodayViewModelTest {
         notifier: FakeBudgetNotifier = FakeBudgetNotifier(),
         categories: FakeCategoryStore = FakeCategoryStore(listOf(food)),
         paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
-    ) = TodayViewModel(
+        timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH),
+    ) = DayViewModel(
+        date = day,
         expenses = store,
         categories = categories,
         paymentMethods = paymentMethods,
         budgets = budgets,
         budgetAlerts = BudgetAlertTracker(alertStore, notifier) { month },
-        today = { today },
+        timeFormat = timeFormat,
     )
 
     @Test
-    fun `lists today's expenses newest first with a running total`() {
+    fun `lists the day's expenses newest first with a running total`() {
         val store = FakeExpenseStore()
         store.seed(
             expense("morning", 10_000, LocalDateTime.of(2026, 10, 5, 9, 0)),
@@ -113,6 +117,19 @@ class TodayViewModelTest {
         assertEquals("Cash", row.paymentMethodName)
         assertEquals("with the team", row.note)
         assertEquals("13:05", row.time)
+    }
+
+    @Test
+    fun `row times use the given clock format so the device's 12 or 24 hour setting wins`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("lunch", 100, LocalDateTime.of(2026, 10, 5, 13, 5)))
+
+        val row = viewModel(
+            store,
+            timeFormat = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH),
+        ).state.value.rows.single()
+
+        assertEquals("1:05 PM", row.time)
     }
 
     @Test
@@ -163,26 +180,17 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `refresh re-anchors the window to the current day`() {
-        var currentDay = LocalDate.of(2026, 10, 5)
+    fun `only the given date's expenses are listed even when other days have spending`() {
         val store = FakeExpenseStore()
-        val vm = TodayViewModel(
-            expenses = store,
-            categories = FakeCategoryStore(listOf(food)),
-            paymentMethods = FakePaymentMethodStore(listOf(cash)),
-            budgets = FakeBudgetStore(),
-            budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
-            today = { currentDay },
+        store.seed(
+            expense("other-day", 99_999, LocalDateTime.of(2026, 10, 4, 12, 0)),
+            expense("x", 5_000, LocalDateTime.of(2026, 10, 5, 0, 30)),
         )
-        assertTrue(vm.state.value.isEmpty)
 
-        store.seed(expense("late-night", 5_000, LocalDateTime.of(2026, 10, 6, 0, 30)))
-        currentDay = LocalDate.of(2026, 10, 6)
+        val state = viewModel(store).state.value
 
-        vm.refresh()
-
-        assertEquals(listOf("late-night"), vm.state.value.rows.map { it.id })
-        assertEquals(Money(5_000), vm.state.value.total)
+        assertEquals(listOf("x"), state.rows.map { it.id })
+        assertEquals(Money(5_000), state.total)
     }
 
     @Test

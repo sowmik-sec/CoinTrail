@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.backup.BackupRoute
+import com.cointrail.ui.day.DayRoute
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
 import com.cointrail.ui.navigation.Destination
@@ -41,7 +42,7 @@ import com.cointrail.ui.settings.ManageCatalogRoute
 import com.cointrail.ui.settings.RecurringSettingsRoute
 import com.cointrail.ui.settings.ReminderSettingsRoute
 import com.cointrail.ui.settings.SettingsRoute
-import com.cointrail.ui.today.TodayRoute
+import java.time.LocalDate
 
 private data class TopLevelTab(
     val destination: Destination,
@@ -135,12 +136,10 @@ private fun AppNavHost(
     ) {
         navigation(startDestination = Destination.Home.route, route = Destination.HOME_ROOT) {
             composable(Destination.Home.route) {
-                TodayRoute(
+                DayRoute(
+                    date = LocalDate.now(),
                     container = container,
-                    onAddClick = { navController.navigate(Destination.QuickAdd.route) },
                     onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
-                    onReportsClick = { navController.openTab(Destination.MONTHLY_ROOT) },
-                    onSettingsClick = { navController.openTab(Destination.SETTINGS_ROOT) },
                 )
             }
         }
@@ -148,8 +147,7 @@ private fun AppNavHost(
             composable(Destination.Monthly.route) {
                 MonthlyReportsRoute(
                     container = container,
-                    onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
-                    onClose = null,
+                    onDayClick = { navController.navigate(Destination.Day(it).route) },
                 )
             }
         }
@@ -218,6 +216,18 @@ private fun AppNavHost(
             QuickAddRoute(
                 container = container,
                 onDone = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Destination.DAY_PATTERN,
+            arguments = listOf(navArgument("date") { type = NavType.StringType }),
+        ) { entry ->
+            val date = entry.arguments?.getString("date")?.let { LocalDate.parse(it) } ?: LocalDate.now()
+            DayRoute(
+                date = date,
+                container = container,
+                onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
+                onBack = { navController.popBackStack() },
             )
         }
         composable(
