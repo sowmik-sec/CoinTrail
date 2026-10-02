@@ -1,5 +1,6 @@
 package com.cointrail.data.reminder
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -34,6 +35,8 @@ class AndroidReminderNotifier(context: Context) : ReminderNotifier {
         appContext.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    // canNotify() below gates POST_NOTIFICATIONS; lint cannot see through the helper.
+    @SuppressLint("MissingPermission")
     override fun notifyReminder(): Boolean {
         if (!canNotify()) return false
 

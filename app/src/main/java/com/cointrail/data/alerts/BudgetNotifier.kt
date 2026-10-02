@@ -1,5 +1,6 @@
 package com.cointrail.data.alerts
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -36,6 +37,8 @@ class AndroidBudgetNotifier(context: Context) : BudgetNotifier {
         appContext.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    // canNotify() below gates POST_NOTIFICATIONS; lint cannot see through the helper.
+    @SuppressLint("MissingPermission")
     override fun notify(alert: BudgetAlert): Boolean {
         if (!canNotify()) return false
 

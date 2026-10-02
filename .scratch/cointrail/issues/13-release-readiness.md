@@ -4,9 +4,9 @@
 
 **Blocked by:** 03–12 (all feature tickets)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Release build uses proper release signing with the keystore excluded from version control
-- [ ] The app has an icon and launcher branding (replacing the placeholder)
-- [ ] A release APK can be sideloaded and runs with all features working
-- [ ] A Play-Store-readiness checklist exists covering the steps to publish for friends and family
+- [x] Release build uses proper release signing with the keystore excluded from version control
+- [x] The app has an icon and launcher branding (replacing the placeholder)
+- [x] A release APK can be sideloaded and runs with all features working
+- [x] A Play-Store-readiness checklist exists covering the steps to publish for friends and family

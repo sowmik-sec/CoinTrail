@@ -16,4 +16,12 @@ See @README.md for project overview and @package.json for available npm/pnpm com
 Add important architectural decisions and patterns here.
 
 ## Common Workflows
-Document frequently used workflows and commands here.
+- Builds need **JDK 17** (AGP 8.7 / Gradle 8.10). The default JDK on this machine is 25, which fails
+  with a cryptic `IllegalArgumentException: 25.0.2`. Prefix commands:
+  `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew ...`
+- Test: `./gradlew :app:testDebugUnitTest` — unit tests only (SPEC §11); no UI tests.
+- Release APK: `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`
+  (signed when `keystore.properties` exists, else `*-unsigned.apk`).
+- Play upload bundle: `./gradlew :app:bundleRelease`.
+- Release signing reads the gitignored `keystore.properties` (see `keystore.properties.example`);
+  keystores and credentials are never committed. Publishing steps: `docs/PLAY_STORE_CHECKLIST.md`.

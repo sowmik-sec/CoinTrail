@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed (monochrome) launcher layer: only the alpha channel is used, so the coin is drawn as a
+     ring with the trail and destination dot inside. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="5"
+        android:pathData="M24,54 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M43,70 C44,61 50,59 54,51 C58,43 62,41 65,37" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M65,35 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0 Z" />
+</vector>

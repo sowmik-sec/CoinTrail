@@ -15,6 +15,18 @@ val googleWebClientId: String = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }.getProperty("GOOGLE_WEB_CLIENT_ID").orEmpty()
 
+// Release signing credentials live in the gitignored keystore.properties (never committed — see
+// keystore.properties.example for the format). Signing is used only when that file names an existing
+// keystore and supplies all four credentials; otherwise the release build stays unsigned, so a fresh
+// clone — or a keystore.properties copied from the example but not yet filled in — still builds.
+val keystoreProperties: Properties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val releaseKeystoreFile = keystoreProperties.getProperty("storeFile")?.let { rootProject.file(it) }
+val hasReleaseSigning: Boolean = releaseKeystoreFile?.exists() == true &&
+    listOf("storePassword", "keyAlias", "keyPassword").all { keystoreProperties.getProperty(it) != null }
+
 android {
     namespace = "com.cointrail"
     compileSdk = 35
@@ -24,14 +36,27 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Signed only when credentials are present; otherwise assembleRelease emits an unsigned APK.
+            signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
         }
     }
 
