@@ -27,6 +27,7 @@ fun SettingsRoute(
     onManage: (CatalogKind) -> Unit,
     onBudgets: () -> Unit,
     onReminder: () -> Unit,
+    onRecurring: () -> Unit,
     onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -36,6 +37,7 @@ fun SettingsRoute(
         onManagePaymentMethods = { onManage(CatalogKind.PAYMENT_METHODS) },
         onBudgets = onBudgets,
         onReminder = onReminder,
+        onRecurring = onRecurring,
         onExportCsv = onExportCsv,
         onClose = onClose,
         modifier = modifier,
@@ -49,6 +51,7 @@ fun SettingsScreen(
     onManagePaymentMethods: () -> Unit,
     onBudgets: () -> Unit,
     onReminder: () -> Unit,
+    onRecurring: () -> Unit,
     onExportCsv: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -72,6 +75,8 @@ fun SettingsScreen(
             SettingsRow(label = CatalogKind.PAYMENT_METHODS.title, onClick = onManagePaymentMethods)
             HorizontalDivider()
             SettingsRow(label = "Budgets", onClick = onBudgets)
+            HorizontalDivider()
+            SettingsRow(label = "Recurring expenses", onClick = onRecurring)
             HorizontalDivider()
             SettingsRow(label = "Daily reminder", onClick = onReminder)
             HorizontalDivider()

@@ -7,6 +7,7 @@ import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -82,4 +83,35 @@ interface BudgetStore {
 
     /** Clears a budget; the row is tombstoned so sync can propagate the removal. */
     suspend fun clear(id: String)
+}
+
+interface RecurringStore {
+
+    fun observeAll(): Flow<List<RecurringSeries>>
+
+    /** Creates a series and returns its id. [startMonth] is the first month it may generate for. */
+    suspend fun add(
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+        startMonth: YearMonth,
+    ): String
+
+    /** Edits a series in place; its generated expenses and generation marker are untouched. */
+    suspend fun update(
+        id: String,
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+    )
+
+    /** Pauses or resumes automatic generation for the series. */
+    suspend fun setPaused(id: String, paused: Boolean)
+
+    /** Tombstones the series; the expenses it already generated are kept (SPEC §6.7). */
+    suspend fun delete(id: String)
 }

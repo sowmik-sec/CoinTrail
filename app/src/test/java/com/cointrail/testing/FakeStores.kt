@@ -9,6 +9,7 @@ import com.cointrail.data.repo.BudgetStore
 import com.cointrail.data.repo.CategoryStore
 import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
+import com.cointrail.data.repo.RecurringStore
 import com.cointrail.domain.budget.BudgetAlert
 import com.cointrail.domain.budget.BudgetAlertKey
 import com.cointrail.domain.model.Budget
@@ -17,6 +18,7 @@ import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -263,5 +265,96 @@ class FakeReminderScheduler : ReminderScheduler {
 
     override suspend fun scheduleNext() {
         scheduleCount++
+    }
+}
+
+class FakeRecurringStore : RecurringStore {
+
+    data class CreateCall(
+        val amount: Money,
+        val categoryId: String,
+        val note: String?,
+        val paymentMethodId: String?,
+        val dayOfMonth: Int,
+        val startMonth: YearMonth,
+    )
+
+    data class UpdateCall(
+        val id: String,
+        val amount: Money,
+        val categoryId: String,
+        val note: String?,
+        val paymentMethodId: String?,
+        val dayOfMonth: Int,
+    )
+
+    private val series = MutableStateFlow<List<RecurringSeries>>(emptyList())
+
+    val creates: MutableList<CreateCall> = mutableListOf()
+    val updates: MutableList<UpdateCall> = mutableListOf()
+    val pauseChanges: MutableList<Pair<String, Boolean>> = mutableListOf()
+    val deletes: MutableList<String> = mutableListOf()
+
+    fun seed(vararg items: RecurringSeries) {
+        series.value = series.value + items
+    }
+
+    override fun observeAll(): Flow<List<RecurringSeries>> = series
+
+    override suspend fun add(
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+        startMonth: YearMonth,
+    ): String {
+        creates += CreateCall(amount, categoryId, note, paymentMethodId, dayOfMonth, startMonth)
+        val id = "series-${creates.size}"
+        series.value = series.value + RecurringSeries(
+            id = id,
+            amount = amount,
+            categoryId = categoryId,
+            note = note,
+            paymentMethodId = paymentMethodId,
+            dayOfMonth = dayOfMonth,
+            startMonth = startMonth,
+            updatedAt = LocalDateTime.now(),
+        )
+        return id
+    }
+
+    override suspend fun update(
+        id: String,
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+    ) {
+        updates += UpdateCall(id, amount, categoryId, note, paymentMethodId, dayOfMonth)
+        series.value = series.value.map { existing ->
+            if (existing.id == id) {
+                existing.copy(
+                    amount = amount,
+                    categoryId = categoryId,
+                    note = note,
+                    paymentMethodId = paymentMethodId,
+                    dayOfMonth = dayOfMonth,
+                )
+            } else {
+                existing
+            }
+        }
+    }
+
+    override suspend fun setPaused(id: String, paused: Boolean) {
+        pauseChanges += id to paused
+        series.value = series.value.map { if (it.id == id) it.copy(isPaused = paused) else it }
+    }
+
+    override suspend fun delete(id: String) {
+        deletes += id
+        series.value = series.value.filterNot { it.id == id }
     }
 }

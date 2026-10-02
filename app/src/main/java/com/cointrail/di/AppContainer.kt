@@ -11,10 +11,14 @@ import com.cointrail.data.reminder.ReminderScheduler
 import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.reminder.SharedPreferencesReminderSettings
 import com.cointrail.data.reminder.WorkManagerReminderScheduler
+import com.cointrail.data.recurring.RecurringExpenseGenerator
+import com.cointrail.data.recurring.RecurringGenerationScheduler
+import com.cointrail.data.recurring.WorkManagerRecurringGenerationScheduler
 import com.cointrail.data.repo.BudgetRepository
 import com.cointrail.data.repo.CategoryRepository
 import com.cointrail.data.repo.ExpenseRepository
 import com.cointrail.data.repo.PaymentMethodRepository
+import com.cointrail.data.repo.RecurringSeriesRepository
 
 /**
  * Hand-rolled dependency graph for the single-module app. Holds the local database and the
@@ -30,6 +34,13 @@ class AppContainer(context: Context) {
     val categories: CategoryRepository = CategoryRepository(database.categoryDao())
     val paymentMethods: PaymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
     val budgets: BudgetRepository = BudgetRepository(database.budgetDao())
+    val recurring: RecurringSeriesRepository = RecurringSeriesRepository(database.recurringSeriesDao())
+
+    /** Creates the ordinary expenses for due recurring series, on app open and from the background job. */
+    val recurringGenerator: RecurringExpenseGenerator =
+        RecurringExpenseGenerator(database.recurringSeriesDao(), database.expenseDao())
+    val recurringScheduler: RecurringGenerationScheduler =
+        WorkManagerRecurringGenerationScheduler(appContext)
 
     /** Raises the 80%/100% budget notifications, at most once per budget per month (SPEC §6.5). */
     val budgetAlerts: BudgetAlertTracker = BudgetAlertTracker(

@@ -16,6 +16,7 @@ import com.cointrail.ui.reports.MonthlyReportsRoute
 import com.cointrail.ui.settings.BudgetSettingsRoute
 import com.cointrail.ui.settings.CatalogKind
 import com.cointrail.ui.settings.ManageCatalogRoute
+import com.cointrail.ui.settings.RecurringSettingsRoute
 import com.cointrail.ui.settings.ReminderSettingsRoute
 import com.cointrail.ui.settings.SettingsRoute
 import com.cointrail.ui.today.TodayRoute
@@ -37,6 +38,7 @@ fun CoinTrailApp(
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showBudgets by rememberSaveable { mutableStateOf(false) }
     var showReminder by rememberSaveable { mutableStateOf(false) }
+    var showRecurring by rememberSaveable { mutableStateOf(false) }
     var showExport by rememberSaveable { mutableStateOf(false) }
     var showReports by rememberSaveable { mutableStateOf(false) }
     var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
@@ -107,6 +109,15 @@ fun CoinTrailApp(
             )
         }
 
+        showRecurring -> {
+            BackHandler { showRecurring = false }
+            RecurringSettingsRoute(
+                container = container,
+                onDone = { showRecurring = false },
+                modifier = modifier,
+            )
+        }
+
         showReports -> {
             MonthlyReportsRoute(
                 container = container,
@@ -122,6 +133,7 @@ fun CoinTrailApp(
                 onManage = { managingKind = it },
                 onBudgets = { showBudgets = true },
                 onReminder = { showReminder = true },
+                onRecurring = { showRecurring = true },
                 onExportCsv = { showExport = true },
                 onClose = { showSettings = false },
                 modifier = modifier,

@@ -14,6 +14,7 @@ import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.util.UUID
 
 class CategoryRepository(
@@ -116,17 +117,65 @@ class BudgetRepository(
 class RecurringSeriesRepository(
     private val dao: RecurringSeriesDao,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) {
+) : RecurringStore {
 
-    fun observeAll(): Flow<List<RecurringSeries>> =
+    override fun observeAll(): Flow<List<RecurringSeries>> =
         dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    suspend fun upsert(series: RecurringSeries) {
-        dao.upsert(series.copy(updatedAt = now()).toEntity())
+    override suspend fun add(
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+        startMonth: YearMonth,
+    ): String {
+        val series = RecurringSeries(
+            amount = amount,
+            categoryId = categoryId,
+            note = note,
+            paymentMethodId = paymentMethodId,
+            dayOfMonth = dayOfMonth,
+            startMonth = startMonth,
+            updatedAt = now(),
+        )
+        dao.upsert(series.toEntity())
+        return series.id
     }
 
-    suspend fun clear(id: String) {
+    override suspend fun update(
+        id: String,
+        amount: Money,
+        categoryId: String,
+        note: String?,
+        paymentMethodId: String?,
+        dayOfMonth: Int,
+    ) {
+        val existing = dao.byId(id)?.toDomain() ?: return
+        dao.upsert(
+            existing.copy(
+                amount = amount,
+                categoryId = categoryId,
+                note = note,
+                paymentMethodId = paymentMethodId,
+                dayOfMonth = dayOfMonth,
+                updatedAt = now(),
+            ).toEntity()
+        )
+    }
+
+    override suspend fun setPaused(id: String, paused: Boolean) {
+        val existing = dao.byId(id)?.toDomain() ?: return
+        dao.upsert(existing.copy(isPaused = paused, updatedAt = now()).toEntity())
+    }
+
+    override suspend fun delete(id: String) {
         dao.softDelete(id, now())
+    }
+
+    /** Full-row upsert, used by tests to write a series verbatim. */
+    suspend fun upsert(series: RecurringSeries) {
+        dao.upsert(series.copy(updatedAt = now()).toEntity())
     }
 
     suspend fun changesSince(since: LocalDateTime): List<RecurringSeries> =

@@ -123,6 +123,9 @@ interface RecurringSeriesDao {
     @Query("SELECT * FROM recurring_series WHERE deletedAt IS NULL ORDER BY dayOfMonth ASC")
     fun observeAll(): Flow<List<RecurringSeriesEntity>>
 
+    @Query("SELECT * FROM recurring_series WHERE deletedAt IS NULL ORDER BY dayOfMonth ASC")
+    suspend fun active(): List<RecurringSeriesEntity>
+
     @Query("UPDATE recurring_series SET deletedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun softDelete(id: String, now: LocalDateTime)
 

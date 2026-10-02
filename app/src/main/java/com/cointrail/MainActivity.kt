@@ -28,6 +28,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as CoinTrailApplication).container
         lifecycleScope.launch { container.seedDefaults() }
+        // Creates any recurring occurrences due today, then keeps the background job armed.
+        lifecycleScope.launch { container.recurringGenerator.generateDue() }
+        lifecycleScope.launch { container.recurringScheduler.enqueuePeriodic() }
         // Keeps the daily reminder armed; also re-establishes the chain after a device restart.
         lifecycleScope.launch { container.reminderScheduler.scheduleNext() }
         openQuickAdd.value = intent.wantsQuickAdd()

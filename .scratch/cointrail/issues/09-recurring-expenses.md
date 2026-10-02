@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 Log an expense, see it on Today
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Monthly series can be created, edited, paused, resumed, and deleted
-- [ ] An occurrence is generated on the series' day of month, clamping day 31 to the month's end
-- [ ] Editing or deleting one generated expense never affects the series or other occurrences
-- [ ] Deleting a series tombstones it while keeping its generated expenses
-- [ ] Generation runs on app open and in the background, and never duplicates a month's entry
+- [x] Monthly series can be created, edited, paused, resumed, and deleted
+- [x] An occurrence is generated on the series' day of month, clamping day 31 to the month's end
+- [x] Editing or deleting one generated expense never affects the series or other occurrences
+- [x] Deleting a series tombstones it while keeping its generated expenses
+- [x] Generation runs on app open and in the background, and never duplicates a month's entry

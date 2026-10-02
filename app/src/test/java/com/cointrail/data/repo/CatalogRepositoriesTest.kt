@@ -3,7 +3,6 @@ package com.cointrail.data.repo
 import androidx.test.core.app.ApplicationProvider
 import com.cointrail.core.Money
 import com.cointrail.data.db.CoinTrailDatabase
-import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -161,23 +160,32 @@ class CatalogRepositoriesTest {
     }
 
     @Test
-    fun `recurring series upsert clear and tombstone in changesSince`() = runBlocking {
-        val series = RecurringSeries(
-            id = "r1",
+    fun `recurring series round-trips and delete tombstones it`() = runBlocking {
+        val id = recurring.add(
             amount = Money(150_000),
             categoryId = "preset-utilities",
-            note = null,
+            note = "internet",
             paymentMethodId = "pm-bkash",
             dayOfMonth = 5,
             startMonth = YearMonth.of(2026, 10),
-            lastGeneratedMonth = null,
-            isPaused = false,
-            updatedAt = now,
         )
-        recurring.upsert(series)
-        assertEquals(listOf("r1"), recurring.observeAll().first().map { it.id })
 
-        recurring.clear("r1")
+        val created = recurring.observeAll().first().single()
+        assertEquals(id, created.id)
+        assertEquals(Money(150_000), created.amount)
+        assertEquals(5, created.dayOfMonth)
+
+        recurring.setPaused(id, true)
+        assertTrue(recurring.observeAll().first().single().isPaused)
+
+        recurring.update(id, Money(175_000), "preset-rent", null, null, 10)
+        val edited = recurring.observeAll().first().single()
+        assertEquals(Money(175_000), edited.amount)
+        assertEquals("preset-rent", edited.categoryId)
+        assertEquals(10, edited.dayOfMonth)
+        assertTrue(edited.isPaused)
+
+        recurring.delete(id)
 
         assertTrue(recurring.observeAll().first().isEmpty())
         val changes = recurring.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
