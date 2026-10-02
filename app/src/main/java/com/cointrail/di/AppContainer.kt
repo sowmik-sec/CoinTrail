@@ -24,6 +24,13 @@ import com.cointrail.data.repo.CategoryRepository
 import com.cointrail.data.repo.ExpenseRepository
 import com.cointrail.data.repo.PaymentMethodRepository
 import com.cointrail.data.repo.RecurringSeriesRepository
+import com.cointrail.data.sync.SharedPreferencesSyncSettings
+import com.cointrail.data.sync.SyncManager
+import com.cointrail.data.sync.SyncScheduler
+import com.cointrail.data.sync.SyncSettings
+import com.cointrail.data.sync.WorkManagerSyncScheduler
+import com.cointrail.data.sync.drive.GoogleDriveAccessTokens
+import com.cointrail.data.sync.drive.GoogleDriveSyncRemoteStore
 
 /**
  * Hand-rolled dependency graph for the single-module app. The user-facing repositories are read
@@ -56,6 +63,16 @@ class AppContainer(context: Context) {
     val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recurringGenerator
     val recurringScheduler: RecurringGenerationScheduler =
         WorkManagerRecurringGenerationScheduler(appContext)
+
+    /** Device-local sync bookkeeping and the one Drive sync cycle for the signed-in account (SPEC §7). */
+    val syncSettings: SyncSettings = SharedPreferencesSyncSettings(appContext)
+    val sync: SyncManager = SyncManager(
+        account = accounts.account,
+        localStore = { accounts.current.syncStore },
+        remoteStore = { account -> GoogleDriveSyncRemoteStore(GoogleDriveAccessTokens(appContext, account)) },
+        settings = syncSettings,
+    )
+    val syncScheduler: SyncScheduler = WorkManagerSyncScheduler(appContext)
 
     /** Raises the 80%/100% budget notifications, at most once per budget per month (SPEC §6.5). */
     val budgetAlerts: BudgetAlertTracker = BudgetAlertTracker(

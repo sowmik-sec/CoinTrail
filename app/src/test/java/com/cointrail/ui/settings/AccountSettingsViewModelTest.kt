@@ -2,8 +2,10 @@ package com.cointrail.ui.settings
 
 import com.cointrail.data.account.Account
 import com.cointrail.data.account.GoogleSignInResult
+import com.cointrail.data.sync.SyncOutcome
 import com.cointrail.testing.FakeAccountSwitcher
 import com.cointrail.testing.FakeGoogleSignIn
+import com.cointrail.testing.FakeSyncController
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -25,7 +27,8 @@ class AccountSettingsViewModelTest {
     private fun viewModel(
         accounts: FakeAccountSwitcher = FakeAccountSwitcher(),
         google: FakeGoogleSignIn = FakeGoogleSignIn(),
-    ) = AccountSettingsViewModel(accounts, google)
+        sync: FakeSyncController = FakeSyncController(),
+    ) = AccountSettingsViewModel(accounts, google, sync)
 
     @Test
     fun `starts signed out and ready to sign in`() {
@@ -115,5 +118,62 @@ class AccountSettingsViewModelTest {
             vm.dismissMessage()
 
             assertNull(vm.state.value.message)
+        }
+
+    @Test
+    fun `sync now runs a sync and stays silent on success`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sync = FakeSyncController()
+            val vm = viewModel(sync = sync)
+
+            vm.syncNow()
+
+            assertEquals(1, sync.syncCount)
+            assertNull(vm.state.value.message)
+        }
+
+    @Test
+    fun `sync now surfaces a failure message`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sync = FakeSyncController().apply { outcome = SyncOutcome.Failed("offline") }
+            val vm = viewModel(sync = sync)
+
+            vm.syncNow()
+
+            assertEquals("offline", vm.state.value.message)
+        }
+
+    @Test
+    fun `sync now requests Drive consent without showing an error`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sync = FakeSyncController().apply { outcome = SyncOutcome.AuthorizationRequired(null) }
+            val vm = viewModel(sync = sync)
+
+            vm.syncNow()
+
+            assertNull(vm.state.value.message)
+            assertNull(vm.driveAuthorizationIntent.value)
+        }
+
+    @Test
+    fun `a granted Drive consent retries the sync`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sync = FakeSyncController()
+            val vm = viewModel(sync = sync)
+
+            vm.onDriveAuthorizationResult(granted = true)
+
+            assertEquals(1, sync.syncCount)
+        }
+
+    @Test
+    fun `a denied Drive consent does not retry`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sync = FakeSyncController()
+            val vm = viewModel(sync = sync)
+
+            vm.onDriveAuthorizationResult(granted = false)
+
+            assertEquals(0, sync.syncCount)
         }
 }

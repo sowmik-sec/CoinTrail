@@ -27,7 +27,9 @@ class CategoryRepository(
 
     suspend fun ensureSeeded() {
         if (dao.count() == 0) {
-            dao.upsertAll(SeedData.categories.map { it.copy(updatedAt = now()).toEntity() })
+            // Seeded with SeedData's fixed timestamp, not "now": a fresh device must not out-stamp a
+            // preset rename or hide synced from another device in last-write-wins (SPEC §7).
+            dao.upsertAll(SeedData.categories.map { it.toEntity() })
         }
     }
 
@@ -61,7 +63,8 @@ class PaymentMethodRepository(
 
     suspend fun ensureSeeded() {
         if (dao.count() == 0) {
-            dao.upsertAll(SeedData.paymentMethods.map { it.copy(updatedAt = now()).toEntity() })
+            // Fixed seed timestamp, as with categories, so presets do not out-stamp synced edits.
+            dao.upsertAll(SeedData.paymentMethods.map { it.toEntity() })
         }
     }
 

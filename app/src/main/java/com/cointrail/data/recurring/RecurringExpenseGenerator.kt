@@ -52,7 +52,10 @@ class RecurringExpenseGenerator(
                 )
                 generated++
             }
-            seriesDao.upsert(series.copy(lastGeneratedMonth = month, updatedAt = timestamp).toEntity())
+            // Advance the generation marker without touching updatedAt: generation is bookkeeping,
+            // not a user edit, so it must not win last-write-wins against a pause or edit synced
+            // from another device (SPEC §7).
+            seriesDao.upsert(series.copy(lastGeneratedMonth = month).toEntity())
         }
         return generated
     }

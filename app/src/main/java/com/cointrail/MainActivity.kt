@@ -28,12 +28,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = (application as CoinTrailApplication).container
-        lifecycleScope.launch { container.seedDefaults() }
-        // Creates any recurring occurrences due today, then keeps the background job armed.
-        lifecycleScope.launch { container.recurringGenerator.generateDue() }
+        // Seed, generate due recurring expenses, then sync — sequentially, so the journal snapshot
+        // includes the generated occurrences instead of racing them.
+        lifecycleScope.launch {
+            container.seedDefaults()
+            container.recurringGenerator.generateDue()
+            container.sync.syncNow()
+        }
         lifecycleScope.launch { container.recurringScheduler.enqueuePeriodic() }
         // Keeps the daily reminder armed; also re-establishes the chain after a device restart.
         lifecycleScope.launch { container.reminderScheduler.scheduleNext() }
+        lifecycleScope.launch { container.syncScheduler.enqueuePeriodic() }
         // Sign-in/out/remove swaps the active database; restart with a fresh ViewModel store so no
         // screen keeps a repository bound to the previous account (SPEC §7).
         lifecycleScope.launch { container.accounts.accountKey.drop(1).collect { restartIntoAccount() } }

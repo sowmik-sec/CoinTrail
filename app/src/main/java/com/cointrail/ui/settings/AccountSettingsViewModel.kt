@@ -1,16 +1,22 @@
 package com.cointrail.ui.settings
 
+import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.data.account.AccountSwitcher
 import com.cointrail.data.account.GoogleSignIn
 import com.cointrail.data.account.GoogleSignInResult
+import com.cointrail.data.sync.SyncController
+import com.cointrail.data.sync.SyncOutcome
+import com.cointrail.data.sync.SyncStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
 data class AccountSettingsUiState(
     val signedIn: Boolean = false,
@@ -19,22 +25,36 @@ data class AccountSettingsUiState(
     val signInConfigured: Boolean = true,
     val busy: Boolean = false,
     val message: String? = null,
+    val syncStatus: SyncStatus = SyncStatus.Idle,
+    val lastSyncedAt: LocalDateTime? = null,
 )
 
 /**
- * Backs the Google account section of Settings: who is signed in, and the three actions that change
- * it — sign in, sign out, and remove this device's copy of the account's data (SPEC §7).
+ * Backs the Google account section of Settings: who is signed in, the three actions that change it
+ * — sign in, sign out, and remove this device's copy of the account's data — and Drive sync, which
+ * is only meaningful while signed in (SPEC §7).
  */
 class AccountSettingsViewModel(
     private val accounts: AccountSwitcher,
     private val googleSignIn: GoogleSignIn,
+    private val sync: SyncController,
 ) : ViewModel() {
 
     private val busy = MutableStateFlow(false)
     private val message = MutableStateFlow<String?>(null)
+    private val pendingDriveAuth = MutableStateFlow<IntentSender?>(null)
+
+    /** Set when a sync needs the user's Drive consent; the screen launches it, then retries. */
+    val driveAuthorizationIntent: StateFlow<IntentSender?> = pendingDriveAuth.asStateFlow()
 
     val state: StateFlow<AccountSettingsUiState> =
-        combine(accounts.account, busy, message) { account, isBusy, currentMessage ->
+        combine(
+            accounts.account,
+            busy,
+            message,
+            sync.status,
+            sync.lastSyncedAt,
+        ) { account, isBusy, currentMessage, syncStatus, lastSynced ->
             AccountSettingsUiState(
                 signedIn = account != null,
                 email = account?.email,
@@ -42,6 +62,8 @@ class AccountSettingsViewModel(
                 signInConfigured = googleSignIn.isConfigured,
                 busy = isBusy,
                 message = currentMessage,
+                syncStatus = syncStatus,
+                lastSyncedAt = lastSynced,
             )
         }.stateIn(
             viewModelScope,
@@ -67,6 +89,24 @@ class AccountSettingsViewModel(
 
     fun removeData() {
         perform { accounts.removeSignedInData() }
+    }
+
+    /** Runs one Drive sync, surfacing success silently, a failure as a message, or a consent prompt. */
+    fun syncNow() {
+        perform {
+            message.value = null
+            when (val outcome = sync.syncNow()) {
+                SyncOutcome.Done -> Unit
+                is SyncOutcome.Failed -> message.value = outcome.message
+                is SyncOutcome.AuthorizationRequired -> pendingDriveAuth.value = outcome.intentSender
+            }
+        }
+    }
+
+    /** Called by the screen after the Drive consent result; a granted result retries the sync. */
+    fun onDriveAuthorizationResult(granted: Boolean) {
+        pendingDriveAuth.value = null
+        if (granted) syncNow()
     }
 
     fun dismissMessage() {

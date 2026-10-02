@@ -2,6 +2,7 @@ package com.cointrail.data.repo
 
 import androidx.test.core.app.ApplicationProvider
 import com.cointrail.core.Money
+import com.cointrail.data.SeedData
 import com.cointrail.data.db.CoinTrailDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -41,6 +42,18 @@ class CatalogRepositoriesTest {
     @After
     fun tearDown() {
         db.close()
+    }
+
+    @Test
+    fun `seeding keeps the fixed preset timestamp so synced edits win`() = runBlocking {
+        categories.ensureSeeded()
+        paymentMethods.ensureSeeded()
+
+        val food = categories.observeAll().first().first { it.id == "preset-food" }
+        val cash = paymentMethods.observeAll().first().first { it.id == "pm-cash" }
+
+        assertEquals(SeedData.categories.first { it.id == "preset-food" }.updatedAt, food.updatedAt)
+        assertEquals(SeedData.paymentMethods.first { it.id == "pm-cash" }.updatedAt, cash.updatedAt)
     }
 
     @Test

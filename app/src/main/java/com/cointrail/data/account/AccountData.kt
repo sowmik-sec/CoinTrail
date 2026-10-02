@@ -8,6 +8,8 @@ import com.cointrail.data.repo.CategoryRepository
 import com.cointrail.data.repo.ExpenseRepository
 import com.cointrail.data.repo.PaymentMethodRepository
 import com.cointrail.data.repo.RecurringSeriesRepository
+import com.cointrail.data.sync.RoomSyncLocalStore
+import com.cointrail.data.sync.SyncLocalStore
 
 /**
  * The open database and repositories for a single account namespace. Everything user-facing is
@@ -30,6 +32,9 @@ class AccountData(
     /** Creates due recurring occurrences on app open and from the background job (SPEC §6.7). */
     val recurringGenerator: RecurringExpenseGenerator =
         RecurringExpenseGenerator(database.recurringSeriesDao(), database.expenseDao())
+
+    /** This namespace's full-row state, read and written by Drive sync (SPEC §7). */
+    val syncStore: SyncLocalStore = RoomSyncLocalStore(database)
 
     /** Seeds the preset categories and payment methods for this namespace exactly once. */
     suspend fun seedDefaults() {

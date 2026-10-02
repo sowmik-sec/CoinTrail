@@ -4,10 +4,10 @@
 
 **Blocked by:** 10 Google account + data isolation
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A change on one device appears on a second device (same account) via the Drive app folder
-- [ ] Deletions propagate via tombstones and never resurrect
-- [ ] Last-write-wins per record by updatedAt resolves conflicting edits deterministically
-- [ ] Sync runs on app open, periodically in the background, and manually via "Sync now" with visible status
-- [ ] Fully offline usage queues changes; nothing is lost after days offline
+- [x] A change on one device appears on a second device (same account) via the Drive app folder
+- [x] Deletions propagate via tombstones and never resurrect
+- [x] Last-write-wins per record by updatedAt resolves conflicting edits deterministically
+- [x] Sync runs on app open, periodically in the background, and manually via "Sync now" with visible status
+- [x] Fully offline usage queues changes; nothing is lost after days offline

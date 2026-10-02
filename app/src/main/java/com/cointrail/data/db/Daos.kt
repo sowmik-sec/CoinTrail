@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 
@@ -16,6 +17,19 @@ interface ExpenseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(expenses: List<ExpenseEntity>)
+
+    @Query("SELECT * FROM expenses")
+    suspend fun all(): List<ExpenseEntity>
+
+    @Query("DELETE FROM expenses")
+    suspend fun deleteAll()
+
+    /** Atomically makes the table exactly [expenses]; used to apply a merged sync journal. */
+    @Transaction
+    suspend fun replaceAll(expenses: List<ExpenseEntity>) {
+        deleteAll()
+        upsertAll(expenses)
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(expense: ExpenseEntity)
@@ -54,6 +68,19 @@ interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(categories: List<CategoryEntity>)
 
+    @Query("SELECT * FROM categories")
+    suspend fun all(): List<CategoryEntity>
+
+    @Query("DELETE FROM categories")
+    suspend fun deleteAll()
+
+    /** Atomically makes the table exactly [categories]; used to apply a merged sync journal. */
+    @Transaction
+    suspend fun replaceAll(categories: List<CategoryEntity>) {
+        deleteAll()
+        upsertAll(categories)
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(category: CategoryEntity)
 
@@ -75,6 +102,19 @@ interface PaymentMethodDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(paymentMethods: List<PaymentMethodEntity>)
+
+    @Query("SELECT * FROM payment_methods")
+    suspend fun all(): List<PaymentMethodEntity>
+
+    @Query("DELETE FROM payment_methods")
+    suspend fun deleteAll()
+
+    /** Atomically makes the table exactly [paymentMethods]; used to apply a merged sync journal. */
+    @Transaction
+    suspend fun replaceAll(paymentMethods: List<PaymentMethodEntity>) {
+        deleteAll()
+        upsertAll(paymentMethods)
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(paymentMethod: PaymentMethodEntity)
@@ -98,6 +138,22 @@ interface BudgetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(budget: BudgetEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(budgets: List<BudgetEntity>)
+
+    @Query("SELECT * FROM budgets")
+    suspend fun all(): List<BudgetEntity>
+
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAll()
+
+    /** Atomically makes the table exactly [budgets]; used to apply a merged sync journal. */
+    @Transaction
+    suspend fun replaceAll(budgets: List<BudgetEntity>) {
+        deleteAll()
+        upsertAll(budgets)
+    }
+
     @Query("SELECT * FROM budgets WHERE scopeKey = :scopeKey")
     suspend fun byScopeKey(scopeKey: String): BudgetEntity?
 
@@ -116,6 +172,22 @@ interface RecurringSeriesDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(series: RecurringSeriesEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(series: List<RecurringSeriesEntity>)
+
+    @Query("SELECT * FROM recurring_series")
+    suspend fun all(): List<RecurringSeriesEntity>
+
+    @Query("DELETE FROM recurring_series")
+    suspend fun deleteAll()
+
+    /** Atomically makes the table exactly [series]; used to apply a merged sync journal. */
+    @Transaction
+    suspend fun replaceAll(series: List<RecurringSeriesEntity>) {
+        deleteAll()
+        upsertAll(series)
+    }
 
     @Query("SELECT * FROM recurring_series WHERE id = :id")
     suspend fun byId(id: String): RecurringSeriesEntity?

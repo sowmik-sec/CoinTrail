@@ -1,5 +1,9 @@
 package com.cointrail.ui.settings
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +39,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.data.account.AccountSwitcher
 import com.cointrail.data.account.GoogleSignIn
+import com.cointrail.data.sync.SyncController
+import com.cointrail.data.sync.SyncStatus
 import com.cointrail.di.AppContainer
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun AccountSettingsRoute(
@@ -49,16 +58,29 @@ fun AccountSettingsRoute(
             accountSettingsViewModelFactory(
                 accounts = container.accounts,
                 googleSignIn = container.googleSignIn(context),
+                sync = container.sync,
             )
         },
     )
     val state by viewModel.state.collectAsState()
+
+    // Drive consent, if a sync asked for it, is launched from this Activity, then the sync retries.
+    val driveAuthLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result -> viewModel.onDriveAuthorizationResult(result.resultCode == Activity.RESULT_OK) }
+    val driveAuthorizationIntent by viewModel.driveAuthorizationIntent.collectAsState()
+    LaunchedEffect(driveAuthorizationIntent) {
+        driveAuthorizationIntent?.let {
+            driveAuthLauncher.launch(IntentSenderRequest.Builder(it).build())
+        }
+    }
 
     AccountSettingsScreen(
         state = state,
         onSignIn = viewModel::signIn,
         onSignOut = viewModel::signOut,
         onRemoveData = viewModel::removeData,
+        onSyncNow = viewModel::syncNow,
         onDismissMessage = viewModel::dismissMessage,
         onClose = onDone,
         modifier = modifier,
@@ -68,11 +90,13 @@ fun AccountSettingsRoute(
 private fun accountSettingsViewModelFactory(
     accounts: AccountSwitcher,
     googleSignIn: GoogleSignIn,
+    sync: SyncController,
 ) = viewModelFactory {
     initializer {
         AccountSettingsViewModel(
             accounts = accounts,
             googleSignIn = googleSignIn,
+            sync = sync,
         )
     }
 }
@@ -84,6 +108,7 @@ fun AccountSettingsScreen(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onRemoveData: () -> Unit,
+    onSyncNow: () -> Unit,
     onDismissMessage: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -106,7 +131,7 @@ fun AccountSettingsScreen(
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Text(
                 text = "CoinTrail works without an account. Signing in keeps this account's data " +
-                    "separate and, later, syncs it through your own Google Drive.",
+                    "separate and syncs it through your own Google Drive.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -115,6 +140,13 @@ fun AccountSettingsScreen(
 
             if (state.signedIn) {
                 AccountSummary(email = state.email, displayName = state.displayName)
+                HorizontalDivider()
+                SyncSection(
+                    status = state.syncStatus,
+                    lastSyncedAt = state.lastSyncedAt,
+                    enabled = !state.busy,
+                    onSyncNow = onSyncNow,
+                )
                 HorizontalDivider()
                 ActionRow(label = "Sign out", enabled = !state.busy, onClick = onSignOut)
                 HorizontalDivider()
@@ -203,6 +235,41 @@ private fun SignInSection(configured: Boolean, busy: Boolean, onSignIn: () -> Un
             )
         }
     }
+}
+
+@Composable
+private fun SyncSection(
+    status: SyncStatus,
+    lastSyncedAt: LocalDateTime?,
+    enabled: Boolean,
+    onSyncNow: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Text(text = "Drive sync", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = syncStatusLabel(status, lastSyncedAt),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Button(
+            onClick = onSyncNow,
+            enabled = enabled && status != SyncStatus.Syncing,
+            modifier = Modifier.padding(top = 12.dp),
+        ) {
+            Text(if (status == SyncStatus.Syncing) "Syncing…" else "Sync now")
+        }
+    }
+}
+
+private val syncTimeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+
+private fun syncStatusLabel(status: SyncStatus, lastSyncedAt: LocalDateTime?): String = when (status) {
+    SyncStatus.Unavailable -> "Sign in to sync."
+    SyncStatus.Idle -> lastSyncedAt?.let { "Last synced ${syncTimeFormat.format(it)}" } ?: "Not synced yet."
+    SyncStatus.Syncing -> "Syncing…"
+    is SyncStatus.Synced -> "Last synced ${syncTimeFormat.format(status.at)}"
+    is SyncStatus.Failed -> status.message
 }
 
 @Composable
