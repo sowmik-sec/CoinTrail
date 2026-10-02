@@ -32,6 +32,7 @@ import com.cointrail.ui.backup.BackupRoute
 import com.cointrail.ui.day.DayRoute
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
+import com.cointrail.ui.home.HomeRoute
 import com.cointrail.ui.navigation.Destination
 import com.cointrail.ui.quickadd.QuickAddRoute
 import com.cointrail.ui.reports.MonthlyReportsRoute
@@ -136,10 +137,12 @@ private fun AppNavHost(
     ) {
         navigation(startDestination = Destination.Home.route, route = Destination.HOME_ROOT) {
             composable(Destination.Home.route) {
-                DayRoute(
-                    date = LocalDate.now(),
+                HomeRoute(
                     container = container,
+                    onAddClick = { navController.navigate(Destination.QuickAdd.route) },
                     onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
+                    onSeeAllToday = { navController.navigate(Destination.Day(LocalDate.now()).route) },
+                    onBudgetsClick = { navController.navigate(Destination.Budgets.route) },
                 )
             }
         }

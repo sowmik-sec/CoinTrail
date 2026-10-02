@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +50,8 @@ import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
 import com.cointrail.domain.reports.MonthGrid
 import com.cointrail.ui.components.BudgetProgressSection
+import com.cointrail.ui.components.deltaColor
+import com.cointrail.ui.components.formatDelta
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -360,17 +361,6 @@ private fun MonthComparisonSection(state: MonthlyReportsUiState) {
         }
     }
 }
-
-@Composable
-private fun deltaColor(delta: Money): Color = when {
-    delta.paisa > 0 -> MaterialTheme.colorScheme.error
-    delta.paisa < 0 -> MaterialTheme.colorScheme.primary
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
-}
-
-/** "+৳1,250" when spending rose, "-৳1,250" when it fell; [Money.format] supplies the minus sign. */
-private fun formatDelta(delta: Money): String =
-    if (delta.paisa > 0) "+${delta.format()}" else delta.format()
 
 private val CELL_HEIGHT = 56.dp
 private const val DAYS_PER_WEEK = 7

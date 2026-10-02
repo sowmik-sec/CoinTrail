@@ -46,7 +46,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
-import com.cointrail.ui.components.BudgetProgressSection
 import com.cointrail.ui.components.ExpenseRow
 import com.cointrail.ui.components.ExpenseRowUi
 import com.cointrail.ui.components.timeFormat
@@ -100,8 +99,6 @@ private fun dayViewModelFactory(
             expenses = container.expenses,
             categories = container.categories,
             paymentMethods = container.paymentMethods,
-            budgets = container.budgets,
-            budgetAlerts = container.budgetAlerts,
             timeFormat = timeFormat,
         )
     }
@@ -142,10 +139,6 @@ fun DayScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             DayTotal(state.total, isToday)
-            if (state.budgets.isNotEmpty()) {
-                HorizontalDivider()
-                BudgetProgressSection("This month's budgets", state.budgets)
-            }
             HorizontalDivider()
             if (state.isEmpty) {
                 EmptyDay(isToday, modifier = Modifier.fillMaxSize())
