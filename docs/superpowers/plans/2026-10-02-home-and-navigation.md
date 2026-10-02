@@ -44,11 +44,11 @@
 - Consumes: nothing.
 - Produces: updated source of truth consumed by Tasks 2–5 and any future agent.
 
-- [ ] **Step 1: Update `docs/SPEC.md`** — §6.1 becomes "Day screen" (date-parameterized); add §6.11 Home screen and §6.12 Navigation; §6.5 budget progress bars move Today → Home; §12 adds plan 8; §13 appends the 2026-10-02 decision block.
-- [ ] **Step 2: Create `CONTEXT.md`** — glossary (Expense, Home, Day list, Quick-add, Monthly report, Budget, Recurring series, Catalog item). Glossary only, no implementation details.
-- [ ] **Step 3: Create `docs/adr/0001-navigation-compose.md`** — decision + considered alternatives + consequences (template per domain-modeling ADR format).
-- [ ] **Step 4: Create this plan file.**
-- [ ] **Step 5: Commit all four files.**
+- [x] **Step 1: Update `docs/SPEC.md`** — §6.1 becomes "Day screen" (date-parameterized); add §6.11 Home screen and §6.12 Navigation; §6.5 budget progress bars move Today → Home; §12 adds plan 8; §13 appends the 2026-10-02 decision block.
+- [x] **Step 2: Create `CONTEXT.md`** — glossary (Expense, Home, Day list, Quick-add, Monthly report, Budget, Recurring series, Catalog item). Glossary only, no implementation details.
+- [x] **Step 3: Create `docs/adr/0001-navigation-compose.md`** — decision + considered alternatives + consequences (template per domain-modeling ADR format).
+- [x] **Step 4: Create this plan file.**
+- [x] **Step 5: Commit all four files.**
 
 ### Task 2: Navigation-Compose host (blocked by Task 1)
 
@@ -62,11 +62,11 @@
 - Consumes: existing `XxxRoute` composables unchanged (`ui/today`, `ui/quickadd`, `ui/edit`, `ui/reports`, `ui/settings`, `ui/backup`, `ui/export`) wired via nav lambdas.
 - Produces: app builds; every existing screen reachable via tabs or drill-ins; back pops the nav stack.
 
-- [ ] **Step 1: Add the dependency** (catalog + `app/build.gradle.kts`).
-- [ ] **Step 2: Define `Destinations.kt`.**
-- [ ] **Step 3: Rewrite `CoinTrailApp.kt` around `NavHost`.**
-- [ ] **Step 4: Wire `MainActivity` deep link → QuickAdd.**
-- [ ] **Step 5: Build green, commit.**
+- [x] **Step 1: Add the dependency** (catalog + `app/build.gradle.kts`).
+- [x] **Step 2: Define `Destinations.kt`.**
+- [x] **Step 3: Rewrite `CoinTrailApp.kt` around `NavHost`.**
+- [x] **Step 4: Wire `MainActivity` deep link → QuickAdd.**
+- [x] **Step 5: Build green, commit.**
 
 ### Task 3: Day screen (blocked by Task 2)
 
@@ -78,9 +78,9 @@
 - Consumes: `DayViewModel` state (day total + rows) and existing repositories.
 - Produces: the single Day destination consumed by Home ("See all") and Monthly.
 
-- [ ] **Step 1: Generalize Today → Day (date-parameterized).**
-- [ ] **Step 2: Point Monthly day taps at Day; remove `DayExpensesScreen`.**
-- [ ] **Step 3: Build green, commit.**
+- [x] **Step 1: Generalize Today → Day (date-parameterized).**
+- [x] **Step 2: Point Monthly day taps at Day; remove `DayExpensesScreen`.**
+- [x] **Step 3: Build green, commit.**
 
 ### Task 4: Home screen (blocked by Task 3)
 
@@ -94,16 +94,16 @@
 - Consumes: `ExpenseRepository` totals queries, `BudgetProgress` domain, `MonthSummary`.
 - Produces: Home destination with state: `monthTotalPaisa`, `todayTotalPaisa`, `todayCount`, `recent` (last 5), `momDelta?`, `budgets`, `hasAnyExpenses`.
 
-- [ ] **Step 1: Write `MonthSummaryTest`, implement `MonthSummary` (red → green).**
-- [ ] **Step 2: Build `HomeViewModel` over repositories + `MonthSummary`.**
-- [ ] **Step 3: Build `HomeScreen` layout: hero + MoM line, today block (preview rows → Edit, "See all" → Day(today), empty message), budget section (tap → Budgets, hidden when none), first-run CTA → QuickAdd.**
-- [ ] **Step 4: Tests green, commit.**
+- [x] **Step 1: Write `MonthSummaryTest`, implement `MonthSummary` (red → green).**
+- [x] **Step 2: Build `HomeViewModel` over repositories + `MonthSummary`.**
+- [x] **Step 3: Build `HomeScreen` layout: hero + MoM line, today block (preview rows → Edit, "See all" → Day(today), empty message), budget section (tap → Budgets, hidden when none), first-run CTA → QuickAdd.**
+- [x] **Step 4: Tests green, commit.**
 
 ### Task 5: Cleanup + verification (blocked by Task 4)
 
-- [ ] **Step 1: Grep-clean** — no remaining `TodayRoute`, `TodayScreen`, `DayExpensesScreen`, flag-navigation symbols (keep the `startInQuickAdd` intent contract).
-- [ ] **Step 2: Run the suite + debug build** (see Verification).
-- [ ] **Step 3: Mark all checkboxes done, commit, push, leave the working tree clean.**
+- [x] **Step 1: Grep-clean** — no remaining `TodayRoute`, `TodayScreen`, `DayExpensesScreen`, flag-navigation symbols (keep the `startInQuickAdd` intent contract).
+- [x] **Step 2: Run the suite + debug build** (see Verification).
+- [x] **Step 3: Mark all checkboxes done, commit, push, leave the working tree clean.**
 
 ## Verification
 
