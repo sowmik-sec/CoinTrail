@@ -1,6 +1,6 @@
 # CoinTrail — Product & Technical Spec
 
-**Status:** FINAL — 2026-10-01, output of a complete design-tree grilling session.
+**Status:** FINAL — 2026-10-01; amended 2026-10-02 (Home & navigation, §6.11–6.12).
 **This file is the source of truth.** Any agent (or human) building or maintaining CoinTrail must read this before writing code. Implementation plans live in `docs/superpowers/plans/`, one per subsystem, and must not contradict this spec. If reality forces a change, update this file first.
 
 ---
@@ -33,7 +33,7 @@ v1 is built for and used by its author. It may later be shared with friends and 
 - **Money:** integer paisa (`Long`) everywhere. Floating point is forbidden. Display: `৳1,250` (whole taka) unless paisa is non-zero → `৳1,250.50`. Entry accepts decimals.
 - **Currency:** single, BDT (৳). No multi-currency, ever, in current scope.
 - **Language:** English UI only.
-- **Time:** `java.time` on device-local timezone. "Day" = local calendar day; "month" = local calendar month.
+- **Time:** `java.time` on device-local timezone. "Day" = local calendar day; "month" = local calendar month. Times in the UI respect the system 12/24-hour setting.
 - **IDs:** UUID strings generated client-side. Presets use stable string IDs (`preset-food`, `pm-cash`, …) so sync across devices never duplicates them.
 
 ## 5. Data model (Room schema v1)
@@ -52,8 +52,8 @@ Validation: expense amount and budget limits must be positive; expense must have
 
 ## 6. Features
 
-### 6.1 Today screen (everyday screen)
-Chronological (descending) list of today's expenses, running total at top, budget progress bars (overall + per category). Tap an expense to edit; swipe to delete with an undo snackbar.
+### 6.1 Day screen (everyday screen)
+Date-parameterized list of one day's expenses, chronological (descending), with that day's total at top. "Today" is the Day screen for the current date (titled "Today"); any other date is titled with the date. Tapping a day in the Monthly calendar (§6.4) opens the same screen for that date. Tap an expense to edit; swipe to delete with an undo snackbar.
 
 ### 6.2 Quick-add screen (reminder target)
 Custom in-app numeric keypad + tappable category chips + optional payment-method selector + collapsed note field (tap to expand). Amount field focused on open; no system keyboard for the amount. Entry must be doable in ~5 seconds.
@@ -62,10 +62,10 @@ Custom in-app numeric keypad + tappable category chips + optional payment-method
 Amount, category, note, payment method, and datetime (for back-filling) are all editable. Delete via undo-snackbar semantics (Q28: gone after undo window; tombstoned internally for sync; no visible trash/audit).
 
 ### 6.4 Monthly view
-Calendar-style heatmap grid (each day a cell with its total), monthly total, per-category breakdown as horizontal bars (donut available as a switch), and month-over-month comparison: total delta **and** per-category deltas vs previous month. Tapping a day opens that day's list.
+Calendar-style heatmap grid (each day a cell with its total), monthly total, per-category breakdown as horizontal bars (donut available as a switch), and month-over-month comparison: total delta **and** per-category deltas vs previous month. Tapping a day opens the Day screen (§6.1) for that date.
 
 ### 6.5 Budgets
-One overall monthly budget plus optional per-category monthly budgets. **No rollover** of unused budget. Progress bars on Today and Monthly screens. Notifications at threshold crossings: **80% (warning)** and **100% (exceeded)** — one notification per budget per month per threshold.
+One overall monthly budget plus optional per-category monthly budgets. **No rollover** of unused budget. Progress bars on Home and Monthly screens. Notifications at threshold crossings: **80% (warning)** and **100% (exceeded)** — one notification per budget per month per threshold.
 
 ### 6.6 Daily reminder
 Daily local notification at a configurable time (default 21:30), **suppressed if at least one expense is already logged that day** (partial-logging days still get the nudge). Tapping the notification opens the quick-add screen. Scheduled via WorkManager with catch-up if the device was off.
@@ -90,6 +90,16 @@ Export any date range. Columns: `date,time,amount_taka,category,payment_method,n
 
 ### 6.10 Settings
 Reminder time, budget management, category & payment-method management, recurring series management, backup/restore, CSV export, sync-now + Google account section (sign in/out, "remove my data from this device").
+
+### 6.11 Home screen (landing)
+The app's front door (Q36): at-a-glance overview instead of landing in a detail list. Top to bottom:
+- **Hero:** month-to-date total ("Spent in {Month}"), with a month-over-month delta line underneath — hidden when there is no previous-month data.
+- **Today block:** today's total + entry count + the last 5 entries. Tapping an entry opens Edit; "See all" opens the Day screen for today. When today has no entries: "No expenses yet today".
+- **Budget progress section** (§6.5): hidden when no budgets are configured; tapping it opens budget management (§6.10).
+- **First run:** when no expenses exist at all, Home shows a "Log your first expense" call-to-action that opens quick-add.
+
+### 6.12 Navigation
+Three bottom tabs — **Home, Monthly, Settings**. Drill-in screens (quick-add, Day, edit expense, budgets, category & payment-method management, daily reminder, recurring, account, backup, CSV export) are full-screen with back navigation. The quick-add FAB (+) is present on every tab. The daily reminder notification opens quick-add directly (§6.6). Implemented with Navigation-Compose (`docs/adr/0001-navigation-compose.md`).
 
 ## 7. Sync & backup (Drive-centric, no backend)
 
@@ -137,6 +147,7 @@ No UI tests.
 5. **Recurring engine** — monthly generation, pause/resume, occurrence independence.
 6. **Drive sync + backup** — sign-in, journal, LWW merge, snapshots, JSON backup/restore, CSV export.
 7. **Release** — release signing, icon/branding, Play-Store-readiness checklist for sharing.
+8. **Home & navigation restructure** — Home landing screen, 3-tab Navigation-Compose host, Day screen unification. *(Plan 2026-10-02-home-and-navigation.md — written.)*
 
 Each plan must produce working, testable software on its own and follow TDD with frequent commits.
 
@@ -156,3 +167,12 @@ Each plan must produce working, testable software on its own and follow TDD with
 - Q23 sideload v1, Play-Store-ready signing. Q24 recurring: monthly, clamp to month end, occurrence-independent, pause/resume.
 - Q25 expenses only. Q27 no receipt photos. Q28 undo snackbar + tombstones, no visible trash.
 - Q30 custom keypad quick-add. Q31 integer paisa, whole-taka display unless paisa non-zero. Q32 dark+light fixed green/teal palette. Q33 calendar heatmap + horizontal bars (donut switchable). Q35 tests on money-at-risk logic only.
+
+### Decision log (grilling session, 2026-10-02 — Home & navigation)
+
+- Q36 landing on a bare day list felt like a tool without a front door → a **Home** overview screen is the landing screen (§6.11); the old "Today screen" becomes the date-parameterized **Day** screen (§6.1).
+- Q37 three bottom tabs: Home / Monthly / Settings (§6.12).
+- Q38 one Day screen shared by Home's "See all" and the Monthly calendar's day taps; the separate reports-internal day list is removed.
+- Q39 Navigation-Compose replaces the flag-based screen switching — `docs/adr/0001-navigation-compose.md`.
+- Q40 quick-add FAB on every tab; the reminder → quick-add deep link is unchanged (Q2).
+- Q41 Home content: month-to-date hero + MoM delta (hidden without prior-month data), today block with a last-5 preview (row → edit), budget section (tap → budget management; hidden when none), first-run CTA.
