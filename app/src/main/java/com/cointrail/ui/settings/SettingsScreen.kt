@@ -29,6 +29,7 @@ fun SettingsRoute(
     onReminder: () -> Unit,
     onRecurring: () -> Unit,
     onExportCsv: () -> Unit,
+    onAccount: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -39,6 +40,7 @@ fun SettingsRoute(
         onReminder = onReminder,
         onRecurring = onRecurring,
         onExportCsv = onExportCsv,
+        onAccount = onAccount,
         onClose = onClose,
         modifier = modifier,
     )
@@ -53,6 +55,7 @@ fun SettingsScreen(
     onReminder: () -> Unit,
     onRecurring: () -> Unit,
     onExportCsv: () -> Unit,
+    onAccount: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -70,6 +73,8 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            SettingsRow(label = "Google account", onClick = onAccount)
+            HorizontalDivider()
             SettingsRow(label = CatalogKind.CATEGORIES.title, onClick = onManageCategories)
             HorizontalDivider()
             SettingsRow(label = CatalogKind.PAYMENT_METHODS.title, onClick = onManagePaymentMethods)
