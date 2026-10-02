@@ -3,6 +3,7 @@ package com.cointrail.ui.settings
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -98,6 +99,7 @@ fun ReminderSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     var picking by remember { mutableStateOf(false) }
+    val is24Hour = DateFormat.is24HourFormat(LocalContext.current)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -134,7 +136,7 @@ fun ReminderSettingsScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = TIME_FORMAT.format(state.time),
+                    text = state.time.format(if (is24Hour) TIME_FORMAT_24 else TIME_FORMAT_12),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -150,6 +152,7 @@ fun ReminderSettingsScreen(
     if (picking) {
         ReminderTimeDialog(
             initial = state.time,
+            is24Hour = is24Hour,
             onDismiss = { picking = false },
             onConfirm = { time ->
                 onSetTime(time)
@@ -163,13 +166,14 @@ fun ReminderSettingsScreen(
 @Composable
 private fun ReminderTimeDialog(
     initial: LocalTime,
+    is24Hour: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (LocalTime) -> Unit,
 ) {
     val pickerState = rememberTimePickerState(
         initialHour = initial.hour,
         initialMinute = initial.minute,
-        is24Hour = true,
+        is24Hour = is24Hour,
     )
 
     AlertDialog(
@@ -187,4 +191,5 @@ private fun ReminderTimeDialog(
     )
 }
 
-private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val TIME_FORMAT_24: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val TIME_FORMAT_12: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
