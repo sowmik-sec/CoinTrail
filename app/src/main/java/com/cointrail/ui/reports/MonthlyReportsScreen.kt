@@ -66,7 +66,7 @@ import java.util.Locale
 fun MonthlyReportsRoute(
     container: AppContainer,
     onExpenseClick: (String) -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: MonthlyReportsViewModel = viewModel(
@@ -110,11 +110,11 @@ fun MonthlyReportsScreen(
     onSelectDay: (LocalDate) -> Unit,
     onBackFromDay: () -> Unit,
     onExpenseClick: (String) -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val selectedDay = state.selectedDay
-    BackHandler { if (selectedDay != null) onBackFromDay() else onClose() }
+    BackHandler { if (selectedDay != null) onBackFromDay() else onClose?.invoke() }
 
     if (selectedDay != null) {
         DayExpensesScreen(
@@ -143,7 +143,7 @@ private fun MonthOverviewScreen(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDay: (LocalDate) -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -152,8 +152,10 @@ private fun MonthOverviewScreen(
             TopAppBar(
                 title = { Text(state.month.format(MONTH_FORMAT)) },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = "Back")
+                    if (onClose != null) {
+                        IconButton(onClick = { onClose() }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Back")
+                        }
                     }
                 },
                 actions = {

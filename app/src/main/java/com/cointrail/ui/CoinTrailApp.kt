@@ -1,17 +1,37 @@
 package com.cointrail.ui
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.backup.BackupRoute
 import com.cointrail.ui.edit.EditExpenseRoute
 import com.cointrail.ui.export.CsvExportRoute
+import com.cointrail.ui.navigation.Destination
 import com.cointrail.ui.quickadd.QuickAddRoute
 import com.cointrail.ui.reports.MonthlyReportsRoute
 import com.cointrail.ui.settings.AccountSettingsRoute
@@ -23,10 +43,24 @@ import com.cointrail.ui.settings.ReminderSettingsRoute
 import com.cointrail.ui.settings.SettingsRoute
 import com.cointrail.ui.today.TodayRoute
 
+private data class TopLevelTab(
+    val destination: Destination,
+    val rootRoute: String,
+    val label: String,
+    val icon: ImageVector,
+)
+
+private val TOP_LEVEL_TABS = listOf(
+    TopLevelTab(Destination.Home, Destination.HOME_ROOT, "Home", Icons.Filled.Home),
+    TopLevelTab(Destination.Monthly, Destination.MONTHLY_ROOT, "Monthly", Icons.Filled.DateRange),
+    TopLevelTab(Destination.Settings, Destination.SETTINGS_ROOT, "Settings", Icons.Filled.Settings),
+)
+
 /**
- * Root of the app's flow: Today (the everyday screen), quick-add, edit-expense and settings.
- * Tapping the daily reminder notification arrives here with [startInQuickAdd] set, which opens
- * quick-add directly (SPEC §6.6).
+ * Root of the app's flow (SPEC §6.12): three bottom tabs — Home, Monthly, Settings — with
+ * full-screen drill-ins (quick-add, edit, settings sub-screens) and the quick-add FAB on every
+ * tab. Tapping the daily reminder notification arrives here with [startInQuickAdd] set, which
+ * navigates straight to quick-add (SPEC §6.6).
  */
 @Composable
 fun CoinTrailApp(
@@ -35,143 +69,165 @@ fun CoinTrailApp(
     onStartInQuickAddConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var showQuickAdd by rememberSaveable { mutableStateOf(false) }
-    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
-    var showSettings by rememberSaveable { mutableStateOf(false) }
-    var showBudgets by rememberSaveable { mutableStateOf(false) }
-    var showReminder by rememberSaveable { mutableStateOf(false) }
-    var showRecurring by rememberSaveable { mutableStateOf(false) }
-    var showExport by rememberSaveable { mutableStateOf(false) }
-    var showReports by rememberSaveable { mutableStateOf(false) }
-    var showAccount by rememberSaveable { mutableStateOf(false) }
-    var showBackup by rememberSaveable { mutableStateOf(false) }
-    var managingKind by rememberSaveable { mutableStateOf<CatalogKind?>(null) }
-    val editId = editingId
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val isTopLevel = TOP_LEVEL_TABS.any { it.destination.route == currentRoute }
 
     LaunchedEffect(startInQuickAdd) {
         if (startInQuickAdd) {
-            showQuickAdd = true
+            navController.navigate(Destination.QuickAdd.route)
             onStartInQuickAddConsumed()
         }
     }
 
-    when {
-        showQuickAdd -> {
-            BackHandler { showQuickAdd = false }
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        bottomBar = {
+            if (isTopLevel) {
+                NavigationBar {
+                    TOP_LEVEL_TABS.forEach { tab ->
+                        NavigationBarItem(
+                            selected = currentRoute == tab.destination.route,
+                            onClick = { navController.openTab(tab.rootRoute) },
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) },
+                        )
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            if (isTopLevel) {
+                FloatingActionButton(onClick = { navController.navigate(Destination.QuickAdd.route) }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add expense")
+                }
+            }
+        },
+    ) { padding ->
+        AppNavHost(
+            container = container,
+            navController = navController,
+            modifier = Modifier.padding(padding),
+        )
+    }
+}
+
+/** Standard bottom-navigation tab switch: keeps each tab's back stack and state across switches. */
+private fun NavHostController.openTab(rootRoute: String) {
+    navigate(rootRoute) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+@Composable
+private fun AppNavHost(
+    container: AppContainer,
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
+) {
+    NavHost(
+        navController = navController,
+        startDestination = Destination.HOME_ROOT,
+        modifier = modifier,
+    ) {
+        navigation(startDestination = Destination.Home.route, route = Destination.HOME_ROOT) {
+            composable(Destination.Home.route) {
+                TodayRoute(
+                    container = container,
+                    onAddClick = { navController.navigate(Destination.QuickAdd.route) },
+                    onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
+                    onReportsClick = { navController.openTab(Destination.MONTHLY_ROOT) },
+                    onSettingsClick = { navController.openTab(Destination.SETTINGS_ROOT) },
+                )
+            }
+        }
+        navigation(startDestination = Destination.Monthly.route, route = Destination.MONTHLY_ROOT) {
+            composable(Destination.Monthly.route) {
+                MonthlyReportsRoute(
+                    container = container,
+                    onExpenseClick = { navController.navigate(Destination.Edit(it).route) },
+                    onClose = null,
+                )
+            }
+        }
+        navigation(startDestination = Destination.Settings.route, route = Destination.SETTINGS_ROOT) {
+            composable(Destination.Settings.route) {
+                SettingsRoute(
+                    onManage = { navController.navigate(Destination.ManageCatalog(it).route) },
+                    onBudgets = { navController.navigate(Destination.Budgets.route) },
+                    onReminder = { navController.navigate(Destination.Reminder.route) },
+                    onRecurring = { navController.navigate(Destination.Recurring.route) },
+                    onExportCsv = { navController.navigate(Destination.CsvExport.route) },
+                    onBackup = { navController.navigate(Destination.Backup.route) },
+                    onAccount = { navController.navigate(Destination.Account.route) },
+                )
+            }
+            composable(Destination.Budgets.route) {
+                BudgetSettingsRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.MANAGE_CATALOG_PATTERN,
+                arguments = listOf(navArgument("kind") { type = NavType.StringType }),
+            ) { entry ->
+                val kind = entry.arguments?.getString("kind")?.let { CatalogKind.valueOf(it) }
+                    ?: CatalogKind.CATEGORIES
+                ManageCatalogRoute(
+                    kind = kind,
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.Reminder.route) {
+                ReminderSettingsRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.Recurring.route) {
+                RecurringSettingsRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.Account.route) {
+                AccountSettingsRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.Backup.route) {
+                BackupRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CsvExport.route) {
+                CsvExportRoute(
+                    container = container,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+        }
+        composable(Destination.QuickAdd.route) {
             QuickAddRoute(
                 container = container,
-                onDone = { showQuickAdd = false },
-                modifier = modifier,
+                onDone = { navController.popBackStack() },
             )
         }
-
-        editId != null -> {
-            BackHandler { editingId = null }
+        composable(
+            route = Destination.EDIT_PATTERN,
+            arguments = listOf(navArgument("expenseId") { type = NavType.StringType }),
+        ) { entry ->
             EditExpenseRoute(
-                expenseId = editId,
+                expenseId = entry.arguments?.getString("expenseId").orEmpty(),
                 container = container,
-                onDone = { editingId = null },
-                modifier = modifier,
-            )
-        }
-
-        managingKind != null -> {
-            val kind = managingKind!!
-            BackHandler { managingKind = null }
-            ManageCatalogRoute(
-                kind = kind,
-                container = container,
-                onDone = { managingKind = null },
-                modifier = modifier,
-            )
-        }
-
-        showExport -> {
-            BackHandler { showExport = false }
-            CsvExportRoute(
-                container = container,
-                onDone = { showExport = false },
-                modifier = modifier,
-            )
-        }
-
-        showBudgets -> {
-            BackHandler { showBudgets = false }
-            BudgetSettingsRoute(
-                container = container,
-                onDone = { showBudgets = false },
-                modifier = modifier,
-            )
-        }
-
-        showReminder -> {
-            BackHandler { showReminder = false }
-            ReminderSettingsRoute(
-                container = container,
-                onDone = { showReminder = false },
-                modifier = modifier,
-            )
-        }
-
-        showRecurring -> {
-            BackHandler { showRecurring = false }
-            RecurringSettingsRoute(
-                container = container,
-                onDone = { showRecurring = false },
-                modifier = modifier,
-            )
-        }
-
-        showReports -> {
-            MonthlyReportsRoute(
-                container = container,
-                onExpenseClick = { editingId = it },
-                onClose = { showReports = false },
-                modifier = modifier,
-            )
-        }
-
-        showAccount -> {
-            BackHandler { showAccount = false }
-            AccountSettingsRoute(
-                container = container,
-                onDone = { showAccount = false },
-                modifier = modifier,
-            )
-        }
-
-        showBackup -> {
-            BackHandler { showBackup = false }
-            BackupRoute(
-                container = container,
-                onDone = { showBackup = false },
-                modifier = modifier,
-            )
-        }
-
-        showSettings -> {
-            BackHandler { showSettings = false }
-            SettingsRoute(
-                onManage = { managingKind = it },
-                onBudgets = { showBudgets = true },
-                onReminder = { showReminder = true },
-                onRecurring = { showRecurring = true },
-                onExportCsv = { showExport = true },
-                onBackup = { showBackup = true },
-                onAccount = { showAccount = true },
-                onClose = { showSettings = false },
-                modifier = modifier,
-            )
-        }
-
-        else -> {
-            TodayRoute(
-                container = container,
-                onAddClick = { showQuickAdd = true },
-                onExpenseClick = { editingId = it },
-                onReportsClick = { showReports = true },
-                onSettingsClick = { showSettings = true },
-                modifier = modifier,
+                onDone = { navController.popBackStack() },
             )
         }
     }

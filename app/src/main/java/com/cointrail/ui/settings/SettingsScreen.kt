@@ -31,7 +31,7 @@ fun SettingsRoute(
     onExportCsv: () -> Unit,
     onBackup: () -> Unit,
     onAccount: () -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     SettingsScreen(
@@ -59,7 +59,7 @@ fun SettingsScreen(
     onExportCsv: () -> Unit,
     onBackup: () -> Unit,
     onAccount: () -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -68,8 +68,10 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = "Back")
+                    if (onClose != null) {
+                        IconButton(onClick = { onClose() }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Back")
+                        }
                     }
                 },
             )
