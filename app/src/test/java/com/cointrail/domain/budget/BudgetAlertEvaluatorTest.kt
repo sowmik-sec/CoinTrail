@@ -30,7 +30,6 @@ class BudgetAlertEvaluatorTest {
     fun `crossing eighty percent fires one warning with the amounts`() {
         val alert = BudgetAlertEvaluator.plan(listOf(progress("b1", 8_000)), emptySet()).single()
 
-        assertEquals("b1", alert.budgetId)
         assertEquals("preset-food", alert.scopeKey)
         assertEquals("Food", alert.label)
         assertEquals(BudgetAlertLevel.WARNING, alert.level)
@@ -101,9 +100,10 @@ class BudgetAlertEvaluatorTest {
             emptySet(),
         )
 
+        // All three rows share the test's category scope, but each is judged on its own amounts.
         assertEquals(
-            listOf("food" to BudgetAlertLevel.WARNING, "rent" to BudgetAlertLevel.EXCEEDED),
-            alerts.map { it.budgetId to it.level },
+            listOf(BudgetAlertLevel.WARNING, BudgetAlertLevel.EXCEEDED),
+            alerts.map { it.level },
         )
     }
 

@@ -8,7 +8,12 @@ import java.time.YearMonth
 /**
  * Remembers which budget thresholds have already been alerted in a given month. This is
  * device-local notification bookkeeping, not user data: it never syncs and is keyed by month so
- * alerts re-arm automatically when the month rolls over (SPEC §6.5).
+ * alerts re-arm automatically when the month rolls over (SPEC §6.5). Keys are (scope, threshold).
+ *
+ * Entries written before alerts were scope-keyed carry a row id instead of a scope, so they never
+ * match after the upgrade and a threshold that had already fired that month can fire one last
+ * time. There is no row-id → scope mapping in preferences to migrate with, so this one-time,
+ * self-healing re-arm is accepted rather than reconstructed.
  */
 interface BudgetAlertStore {
 

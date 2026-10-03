@@ -1,7 +1,6 @@
 package com.cointrail.data.sync
 
 import com.cointrail.core.Money
-import com.cointrail.data.db.BudgetEntity
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.Expense
@@ -27,9 +26,6 @@ data class SyncJournal(
 ) {
     companion object {
         val EMPTY: SyncJournal = SyncJournal()
-
-        /** Budgets are keyed by (scope, month), not id, so two devices never create duplicate keys. */
-        const val OVERALL_SCOPE: String = BudgetEntity.OVERALL
     }
 }
 
@@ -64,8 +60,7 @@ object SyncJournalMerge {
         ),
     )
 
-    private fun Budget.mergeKey(): String =
-        "${categoryId ?: SyncJournal.OVERALL_SCOPE}|${month?.toString().orEmpty()}"
+    private fun Budget.mergeKey(): String = "$scopeKey|${month?.toString().orEmpty()}"
 }
 
 /**

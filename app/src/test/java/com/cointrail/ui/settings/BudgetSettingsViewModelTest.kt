@@ -86,7 +86,7 @@ class BudgetSettingsViewModelTest {
         val rows = vm.state.value.rows.associateBy { it.label }
         assertEquals(BudgetMonthSelection.Month(october), vm.state.value.selection)
         assertEquals(MonthBudgetState.Inherited, rows.getValue("Overall").monthState)
-        assertEquals(MonthBudgetState.Override("eid-food", Money(900_000)), rows.getValue("Food").monthState)
+        assertEquals(MonthBudgetState.Override(Money(900_000)), rows.getValue("Food").monthState)
         assertEquals(MonthBudgetState.NoBudget, rows.getValue("Rent").monthState)
         // The scope's default is still visible next to its month state.
         assertEquals(Money(500_000), rows.getValue("Food").defaultLimit)

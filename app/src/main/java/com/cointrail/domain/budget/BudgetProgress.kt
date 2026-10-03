@@ -35,6 +35,9 @@ data class BudgetProgress(
         require(spent >= Money.ZERO) { "Spent amount must not be negative" }
     }
 
+    /** The scope this progress belongs to: its category, or the overall scope. */
+    val scopeKey: String get() = categoryId ?: Budget.OVERALL_SCOPE
+
     val status: BudgetStatus
         get() = when {
             spent.paisa >= limit.paisa -> BudgetStatus.EXCEEDED

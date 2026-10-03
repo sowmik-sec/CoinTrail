@@ -36,7 +36,7 @@ sealed interface MonthBudgetState {
     data object Inherited : MonthBudgetState
 
     /** The month carries an explicit override limit. */
-    data class Override(val budgetId: String, val limit: Money) : MonthBudgetState
+    data class Override(val limit: Money) : MonthBudgetState
 
     /** The month is explicitly marked as having no budget (no bars, no alerts). */
     data object NoBudget : MonthBudgetState
@@ -157,18 +157,19 @@ class BudgetSettingsViewModel(
         budgetList: List<Budget>,
         picked: BudgetMonthSelection,
     ): BudgetLimitRow {
-        val default = budgetList.firstOrNull { it.scopeKey == scopeKey(categoryId) && it.isDefault }
+        val scopeRows = budgetList.filter { it.scopeKey == scopeKey(categoryId) && !it.isDeleted }
+        val default = scopeRows.firstOrNull { it.isDefault }
         val monthState = when (picked) {
             is BudgetMonthSelection.Default -> MonthBudgetState.Inherited
             is BudgetMonthSelection.Month -> {
-                val override = budgetList.firstOrNull {
-                    it.scopeKey == scopeKey(categoryId) && it.month == picked.month
-                }
+                // Deliberately not EffectiveBudgets.forMonth: editing needs the full tri-state —
+                // including which months inherit and which are explicitly "no budget" — where the
+                // seam resolves only the limit-bearing budgets that govern display.
+                val override = scopeRows.firstOrNull { it.month == picked.month }
                 when {
                     override == null -> MonthBudgetState.Inherited
                     override.isNoBudget -> MonthBudgetState.NoBudget
                     else -> MonthBudgetState.Override(
-                        budgetId = override.id,
                         limit = requireNotNull(override.monthlyLimit) { "A live override must carry its limit" },
                     )
                 }

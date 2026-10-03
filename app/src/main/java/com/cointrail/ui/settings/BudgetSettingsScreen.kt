@@ -124,9 +124,9 @@ fun BudgetSettingsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Text(
-                text = "Every scope has a default monthly budget that governs each month. " +
-                    "Pick any month — past or future — to give it its own limit, mark it as having " +
-                    "no budget, or hand it back to the default. Unused budget never rolls over.",
+                text = "Every scope has a default budget — its standing monthly limit. Pick any " +
+                    "month, past or future, to give it its own limit, mark it as having no budget, " +
+                    "or hand it back to the default. Unused budget never rolls over.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -240,6 +240,8 @@ private fun BudgetRow(
     pickingMonth: Boolean,
     onClick: () -> Unit,
 ) {
+    val monthState = row.monthState
+    val showsInheritedHint = pickingMonth && monthState is MonthBudgetState.Inherited
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -249,7 +251,7 @@ private fun BudgetRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = row.label, style = MaterialTheme.typography.titleMedium)
-            if (pickingMonth && row.monthState is MonthBudgetState.Inherited) {
+            if (showsInheritedHint) {
                 Text(
                     text = row.defaultLimit?.let { "Default ${it.format()}" } ?: "No default budget",
                     style = MaterialTheme.typography.bodySmall,
@@ -274,20 +276,32 @@ private fun BudgetRow(
     }
 }
 
+/** The scope's own override limit for the picked month, when one governs. */
+private fun overrideLimitOf(row: BudgetLimitRow, pickingMonth: Boolean): Money? {
+    val monthState = row.monthState
+    return if (pickingMonth && monthState is MonthBudgetState.Override) monthState.limit else null
+}
+
 /** The trailing state text: what governs the picked selection for this scope. */
-private fun trailingText(row: BudgetLimitRow, pickingMonth: Boolean): String = when {
-    !pickingMonth -> row.defaultLimit?.format() ?: "Not set"
-    row.monthState is MonthBudgetState.Override -> (row.monthState as MonthBudgetState.Override).limit.format()
-    row.monthState is MonthBudgetState.NoBudget -> "No budget"
-    else -> row.defaultLimit?.let { "Default ${it.format()}" } ?: "Not set"
+private fun trailingText(row: BudgetLimitRow, pickingMonth: Boolean): String {
+    val overrideLimit = overrideLimitOf(row, pickingMonth)
+    val noBudget = pickingMonth && row.monthState is MonthBudgetState.NoBudget
+    return when {
+        // Under Default the row simply shows the standing limit; under a month it names the state.
+        !pickingMonth -> row.defaultLimit?.format() ?: "Not set"
+        overrideLimit != null -> overrideLimit.format()
+        noBudget -> "No budget"
+        else -> row.defaultLimit?.let { default -> "Default ${default.format()}" } ?: "Not set"
+    }
 }
 
 /** Whether the trailing text is this scope's own budget (rather than an inherited or absent one). */
-private fun showsOwnBudget(row: BudgetLimitRow, pickingMonth: Boolean): Boolean = when {
-    !pickingMonth -> row.hasDefault
-    row.monthState is MonthBudgetState.Override -> true
-    else -> false
-}
+private fun showsOwnBudget(row: BudgetLimitRow, pickingMonth: Boolean): Boolean =
+    if (pickingMonth) {
+        overrideLimitOf(row, pickingMonth) != null
+    } else {
+        row.hasDefault
+    }
 
 /**
  * The editing dialog. Under Default it saves or clears the scope's default budget; under a picked
@@ -304,14 +318,11 @@ private fun BudgetDialog(
     onDismiss: () -> Unit,
 ) {
     var text by remember(row.categoryId, pickingMonth, pickedMonth) {
-        mutableStateOf(
-            when {
-                pickingMonth && row.monthState is MonthBudgetState.Override ->
-                    MoneyInput.fromMoney((row.monthState as MonthBudgetState.Override).limit).text
-                !pickingMonth -> row.defaultLimit?.let { MoneyInput.fromMoney(it).text } ?: ""
-                else -> ""
-            },
-        )
+        val presetLimit = when {
+            pickingMonth -> overrideLimitOf(row, pickingMonth = true)
+            else -> row.defaultLimit
+        }
+        mutableStateOf(presetLimit?.let { MoneyInput.fromMoney(it).text } ?: "")
     }
     val canSave = Money.fromTaka(text)?.let { it > Money.ZERO } == true
 
@@ -324,7 +335,7 @@ private fun BudgetDialog(
                     text = if (pickingMonth) {
                         "Budget for ${pickedMonth?.format(MONTH_FORMAT)}"
                     } else {
-                        "Default monthly budget"
+                        "Default budget"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

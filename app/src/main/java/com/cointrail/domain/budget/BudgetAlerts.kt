@@ -1,7 +1,6 @@
 package com.cointrail.domain.budget
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Budget
 
 /** The two budget threshold crossings that raise a notification (SPEC §6.5). */
 enum class BudgetAlertLevel {
@@ -21,9 +20,6 @@ enum class BudgetAlertLevel {
 data class BudgetAlertKey(val scopeKey: String, val level: BudgetAlertLevel)
 
 data class BudgetAlert(
-    val budgetId: String,
-
-    /** The scope the alert belongs to, for the (scope, month, threshold) fired bookkeeping. */
     val scopeKey: String,
     val label: String,
     val level: BudgetAlertLevel,
@@ -50,11 +46,10 @@ object BudgetAlertEvaluator {
                 BudgetStatus.ON_TRACK -> null
             } ?: return@mapNotNull null
 
-            if (BudgetAlertKey(scopeKey(item.categoryId), reached) in alreadyFired) return@mapNotNull null
+            if (BudgetAlertKey(item.scopeKey, reached) in alreadyFired) return@mapNotNull null
 
             BudgetAlert(
-                budgetId = item.budgetId,
-                scopeKey = scopeKey(item.categoryId),
+                scopeKey = item.scopeKey,
                 label = item.label,
                 level = reached,
                 limit = item.limit,
@@ -62,7 +57,4 @@ object BudgetAlertEvaluator {
                 percent = item.percent,
             )
         }
-
-    /** The alert scope of a progress row: its category, or the overall scope. */
-    private fun scopeKey(categoryId: String?): String = categoryId ?: Budget.OVERALL_SCOPE
 }
