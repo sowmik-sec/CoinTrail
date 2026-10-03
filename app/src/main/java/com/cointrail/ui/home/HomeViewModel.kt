@@ -14,6 +14,7 @@ import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
+import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.reports.MonthSummary
@@ -45,6 +46,9 @@ data class HomeUiState(
     val recent: List<ExpenseRowUi> = emptyList(),
     val budgets: List<BudgetProgress> = emptyList(),
     val hasAnyExpenses: Boolean = false,
+    /** Spend for each day of the month from the 1st through today, quiet days as zero. */
+    val monthTrail: List<Money> = emptyList(),
+    val daysInMonth: Int = 30,
 )
 
 /** Backs the Home screen: one composed snapshot of where the month and the day stand. */
@@ -77,6 +81,9 @@ class HomeViewModel(
         }
             .combine(expenses.observeCategoryTotals(monthStart, monthEnd)) { snapshot, categoryTotals ->
                 snapshot.copy(categoryTotals = categoryTotals)
+            }
+            .combine(expenses.observeDailyTotals(YearMonth.from(date))) { snapshot, dailyTotals ->
+                snapshot.copy(dailyTotals = dailyTotals)
             }
             .combine(categories.observeAll()) { snapshot, categoryList -> snapshot to categoryList }
             .combine(paymentMethods.observeAll()) { (snapshot, categoryList), paymentMethodList ->
@@ -135,7 +142,17 @@ class HomeViewModel(
                 categoryNames = categoryNames,
             ),
             hasAnyExpenses = snapshot.allTotal > Money.ZERO,
+            monthTrail = monthTrail(date, snapshot.dailyTotals),
+            daysInMonth = date.lengthOfMonth(),
         )
+    }
+
+    /** One total per day from the 1st through [date]; days without spending read zero. */
+    private fun monthTrail(date: LocalDate, dailyTotals: List<DailyTotal>): List<Money> {
+        val totalByDay = dailyTotals.associate { it.day to it.total }
+        return (1..date.dayOfMonth).map { dayOfMonth ->
+            totalByDay[date.withDayOfMonth(dayOfMonth)] ?: Money.ZERO
+        }
     }
 
     private data class Snapshot(
@@ -145,6 +162,7 @@ class HomeViewModel(
         val previousTotal: Money,
         val allTotal: Money,
         val categoryTotals: List<CategoryTotal> = emptyList(),
+        val dailyTotals: List<DailyTotal> = emptyList(),
     )
 
     private data class SnapshotWithCatalogs(

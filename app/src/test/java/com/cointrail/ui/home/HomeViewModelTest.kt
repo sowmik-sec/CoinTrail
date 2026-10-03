@@ -116,6 +116,36 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `the month trail holds one total per elapsed day with quiet days at zero`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("d1-a", 10_000, LocalDateTime.of(2026, 10, 1, 9, 0)),
+            expense("d1-b", 2_500, LocalDateTime.of(2026, 10, 1, 19, 0)),
+            expense("d3", 40_000, LocalDateTime.of(2026, 10, 3, 9, 0)),
+            expense("today", 5_000, LocalDateTime.of(2026, 10, 5, 9, 0)),
+            expense("last-month", 99_999, LocalDateTime.of(2026, 9, 30, 9, 0)),
+        )
+
+        val state = viewModel(store).state.value
+
+        assertEquals(
+            listOf(Money(12_500), Money.ZERO, Money(40_000), Money.ZERO, Money(5_000)),
+            state.monthTrail,
+        )
+        assertEquals(31, state.daysInMonth)
+    }
+
+    @Test
+    fun `the month trail stops at today even when later days already hold expenses`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("future", 10_000, LocalDateTime.of(2026, 10, 20, 9, 0)))
+
+        val state = viewModel(store).state.value
+
+        assertEquals(List(5) { Money.ZERO }, state.monthTrail)
+    }
+
+    @Test
     fun `the today block carries today's total and count`() {
         val store = FakeExpenseStore()
         store.seed(
