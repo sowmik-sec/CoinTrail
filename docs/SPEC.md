@@ -1,6 +1,6 @@
 # CoinTrail — Product & Technical Spec
 
-**Status:** FINAL — 2026-10-01; amended 2026-10-02 (Home & navigation, §6.11–6.12).
+**Status:** FINAL — 2026-10-01; amended 2026-10-02 (Home & navigation, §6.11–6.12; per-month budgets, §5–§7, §11–§13).
 **This file is the source of truth.** Any agent (or human) building or maintaining CoinTrail must read this before writing code. Implementation plans live in `docs/superpowers/plans/`, one per subsystem, and must not contradict this spec. If reality forces a change, update this file first.
 
 ---
@@ -36,7 +36,7 @@ v1 is built for and used by its author. It may later be shared with friends and 
 - **Time:** `java.time` on device-local timezone. "Day" = local calendar day; "month" = local calendar month. Times in the UI respect the system 12/24-hour setting.
 - **IDs:** UUID strings generated client-side. Presets use stable string IDs (`preset-food`, `pm-cash`, …) so sync across devices never duplicates them.
 
-## 5. Data model (Room schema v1)
+## 5. Data model (Room schema v2)
 
 Five tables. All rows carry `updatedAt`; deletable tables carry `deletedAt` tombstones (for sync). Categories and payment methods are never deleted — they are hidden.
 
@@ -45,10 +45,12 @@ Five tables. All rows carry `updatedAt`; deletable tables carry `deletedAt` tomb
 | `expenses` | `id` (PK), `amountPaisa`, `categoryId`, `note?`, `paymentMethodId?`, `occurredAt`, `createdAt`, `updatedAt`, `deletedAt?` — indexed on `occurredAt`, `updatedAt` |
 | `categories` | `id` (PK), `name`, `isPreset`, `isHidden`, `sortOrder`, `updatedAt` |
 | `payment_methods` | same shape as `categories` |
-| `budgets` | `id` (PK), `scopeKey` (categoryId or `__overall__`, unique), `monthlyLimitPaisa`, `updatedAt`, `deletedAt?` |
+| `budgets` | `id` (PK), `scopeKey` (categoryId or `__overall__`), `month?` (ISO `YYYY-MM`; null = the default budget), `monthlyLimitPaisa?` (null only with a `month` = "no budget" for it), `updatedAt`, `deletedAt?` — unique on (`scopeKey`, `month`) |
 | `recurring_series` | `id` (PK), `amountPaisa`, `categoryId`, `note?`, `paymentMethodId?`, `dayOfMonth` (1–31), `startMonth` (ISO `YYYY-MM`), `lastGeneratedMonth?`, `isPaused`, `updatedAt`, `deletedAt?` |
 
-Validation: expense amount and budget limits must be positive; expense must have a category; `dayOfMonth` in 1..31.
+Validation: expense amount must be positive; a budget limit must be positive where present — every default budget has one, while a month override may instead be null ("no budget" for that month); at most one `budgets` row per (`scopeKey`, `month`), the default included; expense must have a category; `dayOfMonth` in 1..31.
+
+Schema v2 (from v1): `budgets` gained `month` and its unique key became (`scopeKey`, `month`); the migration maps existing v1 rows to default budgets.
 
 ## 6. Features
 
@@ -65,7 +67,13 @@ Amount, category, note, payment method, and datetime (for back-filling) are all 
 Calendar-style heatmap grid (each day a cell with its total), monthly total, per-category breakdown as horizontal bars (donut available as a switch), and month-over-month comparison: total delta **and** per-category deltas vs previous month. Tapping a day opens the Day screen (§6.1) for that date.
 
 ### 6.5 Budgets
-One overall monthly budget plus optional per-category monthly budgets. **No rollover** of unused budget. Progress bars on Home and Monthly screens. Notifications at threshold crossings: **80% (warning)** and **100% (exceeded)** — one notification per budget per month per threshold.
+Each budget scope — overall or a category — is governed by a **default budget** (its standing monthly limit) and optional **budget overrides** for individual months (`docs/adr/0002-budget-defaults-and-overrides.md`; terms in `CONTEXT.md`):
+- A month's **effective budget** is its override if it has one, else the default; a month with neither has no budget. An override is either an explicit limit or an explicit "no budget for this month" (no progress bars, no alerts). Removing an override returns the month to the default — it never means "no budget".
+- Overrides can be set for any month, past or future; past months are freely restatable (no audit trail, cf. Q28). Changing the default retroactively restates every month without an override (Q46).
+
+**No rollover** of unused budget. Progress bars on Home and Monthly screens show the month's effective budget (Home always shows the current month). Notifications at threshold crossings: **80% (warning)** and **100% (exceeded)** — one notification per scope per month per threshold; a mid-month budget change never re-arms a threshold already crossed for that scope and month (Q48).
+
+Budget management (§6.10) is the only editing surface: a month picker selects the month being edited (or the default), with "use default for this month" and "no budget for this month" as distinct actions (Q47).
 
 ### 6.6 Daily reminder
 Daily local notification at a configurable time (default 21:30), **suppressed if at least one expense is already logged that day** (partial-logging days still get the nudge). Tapping the notification opens the quick-add screen. Scheduled via WorkManager with catch-up if the device was off.
@@ -107,7 +115,7 @@ Chosen architecture (grilling Q13/Q21): **one substrate — Google Drive — doe
 
 - **Sign-in:** Google Sign-In (Credential Manager). Local-first (Q29): the app works with no account at all; signing in enables sync + Drive backups. Local data is namespaced per Google account; sign-out hides data but keeps a local copy; an explicit "remove my data from this device" action deletes it.
 - **Transport:** the app's private Drive app folder (each user's data lands in *their own* Drive — per-account isolation for free).
-- **Sync:** offline-first change journal — full row state + tombstones, **last-write-wins per record by `updatedAt`** (acceptable: expenses are append-mostly; Q21). Sync triggers: app open, periodic background job (~every 6h), manual "Sync now". Latency of seconds-to-minutes is accepted; no live mirroring.
+- **Sync:** offline-first change journal — full row state + tombstones, **last-write-wins per record by `updatedAt`** (acceptable: expenses are append-mostly; Q21), records keyed by `id` except budgets, keyed by (`scopeKey`, `month`) so two months' overrides never annihilate each other. Sync triggers: app open, periodic background job (~every 6h), manual "Sync now". Latency of seconds-to-minutes is accepted; no live mirroring.
 - **Snapshots (backups):** timestamped full backups written to Drive weekly (and on demand via "Backup now"); an in-app list of snapshots with **restore = LWW-merge into local data** (idempotent, safe on fresh or existing devices).
 - **Full backup file format:** versioned JSON (Q34) — `{"format": "cointrail-backup", "version": 1, "exportedAt": <ISO>, "tables": {...}}` with paisa integers and ISO timestamps; human-readable, forward-migratable. Manual export/import of this file anywhere via the system document picker ("save it wherever" — Q8). Format documented in `docs/BACKUP_FORMAT.md` when Plan 6 lands.
 - **10-year rule:** backup formats must stay parseable by a future app or by hand. Never ship a binary-only backup.
@@ -130,7 +138,7 @@ Dark + light modes with a fixed calm green/teal palette. Dynamic color is delibe
 
 Unit tests only where money or data durability is at risk (Q35):
 - Money math and formatting/parsing
-- Budget calculation and 80%/100% threshold logic
+- Budget calculation (incl. effective-budget resolution: default vs override vs "no budget") and 80%/100% threshold logic
 - Recurring generation incl. month-end clamping and series/occurrence independence
 - Month-over-month math
 - Sync journal merge (LWW, tombstones)
@@ -148,6 +156,7 @@ No UI tests.
 6. **Drive sync + backup** — sign-in, journal, LWW merge, snapshots, JSON backup/restore, CSV export.
 7. **Release** — release signing, icon/branding, Play-Store-readiness checklist for sharing.
 8. **Home & navigation restructure** — Home landing screen, 3-tab Navigation-Compose host, Day screen unification. *(Plan 2026-10-02-home-and-navigation.md — written.)*
+9. **Per-month budgets** — default budgets + month overrides (incl. "no budget" months), effective-budget resolution, month picker in budget management, (scope, month) sync/backup keying.
 
 Each plan must produce working, testable software on its own and follow TDD with frequent commits.
 
@@ -176,3 +185,14 @@ Each plan must produce working, testable software on its own and follow TDD with
 - Q39 Navigation-Compose replaces the flag-based screen switching — `docs/adr/0001-navigation-compose.md`.
 - Q40 quick-add FAB on every tab; the reminder → quick-add deep link is unchanged (Q2).
 - Q41 Home content: month-to-date hero + MoM delta (hidden without prior-month data), today block with a last-5 preview (row → edit), budget section (tap → budget management; hidden when none), first-run CTA.
+
+### Decision log (grilling session, 2026-10-02 — per-month budgets)
+
+- Q42 users need different limits for different months → each scope keeps a **default budget** plus per-month **budget overrides** (incl. an explicit "no budget" state) over per-month-only rows or effective-dated limits — `docs/adr/0002-budget-defaults-and-overrides.md`.
+- Q43 overrides apply uniformly to overall and per-category scopes.
+- Q44 "no budget for this month" is an explicit override state, distinct from removing an override (= back to the default).
+- Q45 any month — past or future — can get or change an override; past months are freely restatable (Q28's no-audit stance).
+- Q46 changing the default retroactively restates every month without an override; no bulk "keep past months at their old limits" action in v1.
+- Q47 budget management with a month picker is the only editing surface; no Monthly-report editing affordance.
+- Q48 threshold alerts keyed by (scope, month, threshold): one per scope per month per threshold; a mid-month budget change never re-arms.
+- Q49 journal/backup stay format v1: budget rows gain nullable `month` (absent = default); LWW merge key becomes (scope, month); a pre-override reader degrades overrides to one row per scope.

@@ -24,7 +24,19 @@ A calendar heatmap, per-category breakdown, and month-over-month comparison for 
 _Avoid_: Reports, Analytics
 
 **Budget**:
-A monthly spending limit, overall or per category. Unused budget never rolls over.
+A spending limit for a scope — overall or a category. Each month is measured against its effective budget. Unused budget never rolls over.
+
+**Default budget**:
+The standing monthly limit for a scope; governs any month without a budget override.
+_Avoid_: standing budget
+
+**Budget override**:
+A month's own limit for a scope: either an explicit limit or an explicit "no budget". Beats the default budget for that month.
+_Avoid_: monthly budget, custom budget
+
+**Effective budget**:
+The budget a month actually uses: its budget override if it has one, else the default budget.
+_Avoid_: actual budget, resolved budget
 
 **Recurring series**:
 A monthly rule that auto-creates expenses on a day of the month; occurrences are independent once created.

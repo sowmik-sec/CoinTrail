@@ -39,7 +39,7 @@ unreadable; add a new version instead.
 - **Money** is always an **integer number of paisa** (`1 taka = 100 paisa`). A `৳12.50` expense is
   stored as `1250`. Floating point is never used.
 - **Timestamps** are ISO-8601 local date-times, e.g. `"2026-10-02T21:30:00"`. Dates that carry no
-  time (a recurring series' start month) use `yyyy-MM`.
+  time (a recurring series' start month, a budget's month) use `yyyy-MM`.
 - **IDs** are UUID strings generated on the device. Preset rows use stable ids (`preset-food`,
   `pm-cash`, …) so importing into another device never duplicates them.
 - **Tombstones.** Deletable rows are never physically removed: they carry `deletedAt` (and an updated
@@ -77,11 +77,17 @@ Same shape; categories and payment methods are hidden, never deleted, so they ha
 
 ### `budgets`
 
+A row is either the scope's **default budget** (`month` null) or a **budget override** for one month
+(`month` set). A missing `month` field in a file written before per-month budgets is read as null.
+An override with a null `monthlyLimitPaisa` is the explicit "no budget for this month" state —
+distinct from a tombstone, which removes the override and lets the default apply again.
+
 | Field | Type | Nullable |
 |---|---|---|
 | `id` | string | no |
-| `categoryId` | string | yes (null = the overall monthly budget) |
-| `monthlyLimitPaisa` | integer | no (positive) |
+| `categoryId` | string | yes (null = the overall scope) |
+| `month` | `yyyy-MM` | yes (null = the scope's default budget) |
+| `monthlyLimitPaisa` | integer | yes (null only with a `month`, meaning "no budget for that month"; otherwise positive) |
 | `updatedAt` | ISO date-time | no |
 | `deletedAt` | ISO date-time | yes |
 
@@ -107,8 +113,9 @@ Importing a file — whether from Drive or the document picker — does **not** 
 Every row is merged **last-write-wins per record**, keyed as follows:
 
 - `expenses`, `categories`, `paymentMethods`, `recurring`: by `id`.
-- `budgets`: by scope (`categoryId`, or the overall scope), because a budget's identity is the scope
-  it governs.
+- `budgets`: by scope and month (`categoryId` — or the overall scope — plus `month`), because a
+  budget's identity is the scope and month it governs. The default budget and each month's override
+  merge independently.
 
 For a given key the winner is, in order: the row with the greater `updatedAt`; then a tombstone over
 a live row; then the lexicographically greater serialized row (a stable, symmetric tie-break). Rows
@@ -117,3 +124,8 @@ present on only one side survive.
 This makes restore **idempotent** and safe on both a **fresh** device (the file fills the empty
 database) and an **existing** device (newer local edits win, nothing is lost). Importing the same
 file twice changes nothing the second time. (See `domain/sync/SyncMerge.kt`.)
+
+**Older readers.** A reader from before per-month budgets merges budgets by scope alone, ignoring
+`month`: restoring a newer file on such a version collapses per-month overrides to one row per scope
+(last-write-wins by `updatedAt`). The file itself stays fully parseable — the ten-year rule holds —
+but per-month fidelity requires a reader that knows `month`.
