@@ -62,8 +62,14 @@ class HomeViewModelTest {
         updatedAt = at,
     )
 
-    private fun budget(id: String, categoryId: String?, paisa: Long) =
-        Budget(id = id, categoryId = categoryId, monthlyLimit = Money(paisa), updatedAt = noon)
+    private fun budget(id: String, categoryId: String?, paisa: Long?, month: YearMonth? = null) =
+        Budget(
+            id = id,
+            categoryId = categoryId,
+            month = month,
+            monthlyLimit = paisa?.let(::Money),
+            updatedAt = noon,
+        )
 
     private fun viewModel(
         store: FakeExpenseStore,
@@ -255,6 +261,70 @@ class HomeViewModelTest {
         store.seed(expense("big", 8_500, LocalDateTime.of(2026, 10, 3, 9, 0)))
         val budgets = FakeBudgetStore()
         budgets.seed(budget("overall", null, 10_000))
+        val notifier = FakeBudgetNotifier()
+
+        viewModel(store, budgets, notifier = notifier)
+        advanceUntilIdle()
+
+        assertEquals(listOf(BudgetAlertLevel.WARNING), notifier.alerts.map { it.level })
+    }
+
+    @Test
+    fun `this month's override governs Home's bar instead of the default`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("food", 30_000, LocalDateTime.of(2026, 10, 3, 9, 0), categoryId = "preset-food"))
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("food-budget", "preset-food", 100_000),
+            budget("eid-food", "preset-food", 900_000, month = month),
+        )
+
+        val bar = viewModel(store, budgets).state.value.budgets.single()
+
+        assertEquals(Money(900_000), bar.limit)
+        assertEquals(Money(30_000), bar.spent)
+        assertEquals(BudgetStatus.ON_TRACK, bar.status)
+    }
+
+    @Test
+    fun `another month's override never leaks into Home's current-month bars`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("food", 30_000, LocalDateTime.of(2026, 10, 3, 9, 0), categoryId = "preset-food"))
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("food-budget", "preset-food", 100_000),
+            budget("november-food", "preset-food", 900_000, month = YearMonth.of(2026, 11)),
+        )
+
+        val bar = viewModel(store, budgets).state.value.budgets.single()
+
+        assertEquals(Money(100_000), bar.limit)
+    }
+
+    @Test
+    fun `a no-budget month shows no bars on Home`() {
+        val store = FakeExpenseStore()
+        store.seed(expense("food", 30_000, LocalDateTime.of(2026, 10, 3, 9, 0)))
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("overall", null, 100_000),
+            budget("quiet-month", null, null, month = month),
+        )
+
+        assertTrue(viewModel(store, budgets).state.value.budgets.isEmpty())
+    }
+
+    @Test
+    fun `threshold alerts measure this month against its override`() = runTest(mainDispatcherRule.testDispatcher) {
+        val store = FakeExpenseStore()
+        // 850k spent: a warning against the month's 900k override, but it would already be
+        // exceeded if the scope's 100k default governed the month.
+        store.seed(expense("big", 850_000, LocalDateTime.of(2026, 10, 3, 9, 0)))
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("overall", null, 100_000),
+            budget("eid-month", null, 900_000, month = month),
+        )
         val notifier = FakeBudgetNotifier()
 
         viewModel(store, budgets, notifier = notifier)

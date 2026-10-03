@@ -53,8 +53,14 @@ class MonthlyReportsViewModelTest {
         updatedAt = at,
     )
 
-    private fun budget(id: String, categoryId: String?, paisa: Long) =
-        Budget(id = id, categoryId = categoryId, monthlyLimit = Money(paisa), updatedAt = noon)
+    private fun budget(id: String, categoryId: String?, paisa: Long?, month: YearMonth? = null) =
+        Budget(
+            id = id,
+            categoryId = categoryId,
+            month = month,
+            monthlyLimit = paisa?.let(::Money),
+            updatedAt = noon,
+        )
 
     private fun viewModel(
         store: FakeExpenseStore,
@@ -189,6 +195,52 @@ class MonthlyReportsViewModelTest {
         store.seed(expense("x", 100, LocalDateTime.of(2026, 10, 3, 9, 0)))
 
         assertTrue(viewModel(store).state.value.budgets.isEmpty())
+    }
+
+    @Test
+    fun `budget bars measure the viewed month against that month's effective budget`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("oct", 80_000, LocalDateTime.of(2026, 10, 3, 9, 0)),
+            expense("sep", 8_000, LocalDateTime.of(2026, 9, 3, 9, 0)),
+        )
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("overall", null, 200_000),
+            budget("eid-october", null, 60_000, month = month),
+            budget("quiet-september", null, 100_000, month = YearMonth.of(2026, 9)),
+        )
+        val vm = viewModel(store, budgets)
+
+        // October is governed by its own override, not the ৳2,000 default.
+        val octoberBar = vm.state.value.budgets.single()
+        assertEquals(Money(60_000), octoberBar.limit)
+        assertEquals(BudgetStatus.EXCEEDED, octoberBar.status)
+
+        vm.showPreviousMonth()
+
+        val septemberBar = vm.state.value.budgets.single()
+        assertEquals(Money(100_000), septemberBar.limit)
+        assertEquals(BudgetStatus.ON_TRACK, septemberBar.status)
+    }
+
+    @Test
+    fun `a viewed no-budget month shows no budget bars`() {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("oct", 80_000, LocalDateTime.of(2026, 10, 3, 9, 0)),
+            expense("sep", 8_000, LocalDateTime.of(2026, 9, 3, 9, 0)),
+        )
+        val budgets = FakeBudgetStore()
+        budgets.seed(
+            budget("overall", null, 200_000),
+            budget("quiet-september", null, null, month = YearMonth.of(2026, 9)),
+        )
+        val vm = viewModel(store, budgets)
+
+        vm.showPreviousMonth()
+
+        assertTrue(vm.state.value.budgets.isEmpty())
     }
 
     @Test
