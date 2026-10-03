@@ -63,8 +63,8 @@ class RoomSyncLocalStoreTest {
         db.expenseDao().upsert(expenseEntity("e2", 200, t1, deleted = t1))
         db.categoryDao().upsert(CategoryEntity("preset-food", "Food", true, false, 0, t0))
         db.paymentMethodDao().upsert(PaymentMethodEntity("pm-cash", "Cash", true, false, 0, t0))
-        db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, 2_000_000, t0, null))
-        db.budgetDao().upsert(BudgetEntity("b2", "preset-food", 500_000, t1, t1))
+        db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, null, 2_000_000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b2", "preset-food", null, 500_000, t1, t1))
         db.recurringSeriesDao().upsert(
             RecurringSeriesEntity("r1", 150_000, "preset-utilities", null, null, 5, "2026-10", null, false, t1, null)
         )
@@ -116,7 +116,7 @@ class RoomSyncLocalStoreTest {
         db.expenseDao().upsert(expenseEntity("e2", 200, t1, deleted = t1))
         db.categoryDao().upsert(CategoryEntity("cat-1", "Pets", false, true, 9, t1))
         db.paymentMethodDao().upsert(PaymentMethodEntity("pm-bkash", "bKash", true, false, 1, t0))
-        db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, 2_000_000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, null, 2_000_000, t0, null))
         db.recurringSeriesDao().upsert(
             RecurringSeriesEntity("r1", 150_000, "preset-utilities", "internet", "pm-bkash", 5, "2026-10", "2026-10", false, t1, null)
         )

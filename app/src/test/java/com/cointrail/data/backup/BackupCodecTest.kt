@@ -52,6 +52,14 @@ class BackupCodecTest {
         budgets = listOf(
             Budget(id = "b1", categoryId = null, monthlyLimit = Money(2_000_000), updatedAt = t0),
             Budget(id = "b2", categoryId = "preset-food", monthlyLimit = Money(500_000), updatedAt = t1, deletedAt = t1),
+            Budget(
+                id = "b3", categoryId = "preset-food", month = YearMonth.of(2026, 11),
+                monthlyLimit = Money(900_000), updatedAt = t1,
+            ),
+            Budget(
+                id = "b4", categoryId = null, month = YearMonth.of(2026, 12),
+                monthlyLimit = null, updatedAt = t1,
+            ),
         ),
         recurring = listOf(
             RecurringSeries(

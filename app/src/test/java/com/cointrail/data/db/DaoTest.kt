@@ -115,9 +115,9 @@ class DaoTest {
     }
 
     @Test
-    fun `budget upsert on same scopeKey replaces the row`() = runBlocking {
-        db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, 1000, t0, null))
-        db.budgetDao().upsert(BudgetEntity("b2", BudgetEntity.OVERALL, 2000, t0, null))
+    fun `budget upsert on same scope and month replaces the row`() = runBlocking {
+        db.budgetDao().upsert(BudgetEntity("b1", "preset-food", "2026-10", 1000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b2", "preset-food", "2026-10", 2000, t0, null))
         val all = db.budgetDao().observeAll().first()
         assertEquals(1, all.size)
         assertEquals("b2", all.first().id)
@@ -125,8 +125,21 @@ class DaoTest {
     }
 
     @Test
+    fun `a scope can hold a default and two months' overrides at once`() = runBlocking {
+        db.budgetDao().upsert(BudgetEntity("b1", "preset-food", null, 1000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b2", "preset-food", "2026-10", 2000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b3", "preset-food", "2026-11", 3000, t0, null))
+        val all = db.budgetDao().observeAll().first()
+        assertEquals(listOf("b1", "b2", "b3"), all.map { it.id })
+        // SQLite's unique index treats NULLs as distinct, so locating the default row by its
+        // (scope, month) key is how the repository keeps exactly one default per scope.
+        assertEquals("b1", db.budgetDao().byScopeAndMonth("preset-food", null)?.id)
+        assertEquals("b3", db.budgetDao().byScopeAndMonth("preset-food", "2026-11")?.id)
+    }
+
+    @Test
     fun `budget softDelete hides row and tombstone stays in changesSince`() = runBlocking {
-        db.budgetDao().upsert(BudgetEntity("b1", "preset-food", 1000, t0, null))
+        db.budgetDao().upsert(BudgetEntity("b1", "preset-food", null, 1000, t0, null))
         val now = LocalDateTime.of(2026, 10, 5, 22, 0)
         db.budgetDao().softDelete("b1", now)
         assertTrue(db.budgetDao().observeAll().first().isEmpty())

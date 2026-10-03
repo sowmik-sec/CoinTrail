@@ -3,6 +3,7 @@ package com.cointrail.data.db
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.cointrail.domain.model.Budget
 import java.time.LocalDateTime
 
 @Entity(tableName = "expenses", indices = [Index("occurredAt"), Index("updatedAt")])
@@ -38,16 +39,24 @@ data class PaymentMethodEntity(
     val updatedAt: LocalDateTime,
 )
 
-@Entity(tableName = "budgets", indices = [Index(value = ["scopeKey"], unique = true), Index("updatedAt")])
+@Entity(
+    tableName = "budgets",
+    indices = [Index(value = ["scopeKey", "month"], unique = true), Index("updatedAt")],
+)
 data class BudgetEntity(
     @PrimaryKey val id: String,
     val scopeKey: String,
-    val monthlyLimitPaisa: Long,
+
+    /** ISO `YYYY-MM`; null is the scope's default budget (SPEC §5). */
+    val month: String?,
+
+    /** Null only with a [month]: the explicit "no budget" state for that month. */
+    val monthlyLimitPaisa: Long?,
     val updatedAt: LocalDateTime,
     val deletedAt: LocalDateTime?,
 ) {
     companion object {
-        const val OVERALL: String = "__overall__"
+        const val OVERALL: String = Budget.OVERALL_SCOPE
     }
 }
 

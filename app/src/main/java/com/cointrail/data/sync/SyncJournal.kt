@@ -28,15 +28,16 @@ data class SyncJournal(
     companion object {
         val EMPTY: SyncJournal = SyncJournal()
 
-        /** Budgets are keyed by scope, not id, so two devices can never create duplicate scopes. */
+        /** Budgets are keyed by (scope, month), not id, so two devices never create duplicate keys. */
         const val OVERALL_SCOPE: String = BudgetEntity.OVERALL
     }
 }
 
 /**
  * Reconciles two journals with last-write-wins per record (SPEC §7). Expense, category, payment
- * method and recurring rows use their id; budgets use their scope, because a budget's identity on a
- * device is the scope it governs, not the generated row id.
+ * method and recurring rows use their id; budgets use (scope, month), because a budget's identity
+ * is the scope and month it governs, not the generated row id — so two months' overrides for one
+ * scope never annihilate each other.
  */
 object SyncJournalMerge {
 
@@ -54,7 +55,7 @@ object SyncJournalMerge {
             canonical = { it.toString() },
         ),
         budgets = SyncMerge.byLastWrite(
-            local.budgets, remote.budgets, key = { it.scopeKey() }, updatedAt = { it.updatedAt },
+            local.budgets, remote.budgets, key = { it.mergeKey() }, updatedAt = { it.updatedAt },
             isDeleted = { it.deletedAt != null }, canonical = { it.toString() },
         ),
         recurring = SyncMerge.byLastWrite(
@@ -63,7 +64,8 @@ object SyncJournalMerge {
         ),
     )
 
-    private fun Budget.scopeKey(): String = categoryId ?: SyncJournal.OVERALL_SCOPE
+    private fun Budget.mergeKey(): String =
+        "${categoryId ?: SyncJournal.OVERALL_SCOPE}|${month?.toString().orEmpty()}"
 }
 
 /**
@@ -174,14 +176,16 @@ object SyncJournalCodec {
     private fun encodeBudget(budget: Budget): JSONObject = JSONObject()
         .put("id", budget.id)
         .put("categoryId", budget.categoryId ?: JSONObject.NULL)
-        .put("monthlyLimitPaisa", budget.monthlyLimit.paisa)
+        .put("month", budget.month?.toString() ?: JSONObject.NULL)
+        .put("monthlyLimitPaisa", budget.monthlyLimit?.paisa ?: JSONObject.NULL)
         .put("updatedAt", budget.updatedAt.toString())
         .put("deletedAt", budget.deletedAt?.toString() ?: JSONObject.NULL)
 
     private fun decodeBudget(row: JSONObject): Budget = Budget(
         id = row.getString("id"),
         categoryId = row.nullableString("categoryId"),
-        monthlyLimit = Money(row.getLong("monthlyLimitPaisa")),
+        month = row.nullableString("month")?.let(YearMonth::parse),
+        monthlyLimit = if (row.isNull("monthlyLimitPaisa")) null else Money(row.getLong("monthlyLimitPaisa")),
         updatedAt = LocalDateTime.parse(row.getString("updatedAt")),
         deletedAt = row.nullableString("deletedAt")?.let(LocalDateTime::parse),
     )

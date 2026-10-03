@@ -188,27 +188,74 @@ class FakeBudgetStore : BudgetStore {
 
     private val budgets = MutableStateFlow<List<Budget>>(emptyList())
 
-    val sets: MutableList<Pair<String?, Money>> = mutableListOf()
+    val defaultSets: MutableList<Pair<String?, Money>> = mutableListOf()
+    val overrideSets: MutableList<Triple<String?, YearMonth, Money>> = mutableListOf()
+    val noBudgetSets: MutableList<Pair<String?, YearMonth>> = mutableListOf()
+    val overrideRemovals: MutableList<Pair<String?, YearMonth>> = mutableListOf()
     val clears: MutableList<String> = mutableListOf()
 
     fun seed(vararg items: Budget) {
         budgets.value = budgets.value + items
     }
 
-    override fun observeAll(): Flow<List<Budget>> = budgets
+    override fun observeAll(): Flow<List<Budget>> = budgets.map { rows -> rows.filterNot { it.isDeleted } }
 
-    override suspend fun set(categoryId: String?, monthlyLimit: Money): String {
-        sets += categoryId to monthlyLimit
-        val existing = budgets.value.firstOrNull { it.categoryId == categoryId }
-        val id = existing?.id ?: "budget-${sets.size}"
-        budgets.value = budgets.value.filterNot { it.categoryId == categoryId } +
-            Budget(id = id, categoryId = categoryId, monthlyLimit = monthlyLimit, updatedAt = LocalDateTime.now())
-        return id
+    override suspend fun setDefault(categoryId: String?, monthlyLimit: Money): String =
+        write(categoryId, month = null, monthlyLimit = monthlyLimit) { id ->
+            defaultSets += categoryId to monthlyLimit
+            id
+        }
+
+    override suspend fun setOverride(categoryId: String?, month: YearMonth, monthlyLimit: Money): String =
+        write(categoryId, month, monthlyLimit) { id ->
+            overrideSets += Triple(categoryId, month, monthlyLimit)
+            id
+        }
+
+    override suspend fun setNoBudget(categoryId: String?, month: YearMonth): String =
+        write(categoryId, month, monthlyLimit = null) { id ->
+            noBudgetSets += categoryId to month
+            id
+        }
+
+    override suspend fun removeOverride(categoryId: String?, month: YearMonth) {
+        val scopeKey = categoryId ?: Budget.OVERALL_SCOPE
+        val existing = budgets.value.firstOrNull {
+            it.scopeKey == scopeKey && it.month == month
+        } ?: return
+        if (existing.isDeleted) return
+        overrideRemovals += categoryId to month
+        budgets.value = budgets.value.map {
+            if (it.id == existing.id) it.copy(deletedAt = it.updatedAt) else it
+        }
     }
 
     override suspend fun clear(id: String) {
         clears += id
-        budgets.value = budgets.value.filterNot { it.id == id }
+        budgets.value = budgets.value.map {
+            if (it.id == id) it.copy(deletedAt = it.updatedAt) else it
+        }
+    }
+
+    /** Mirrors the repository: reuses the (scope, month) row so at most one row exists per key. */
+    private suspend fun write(
+        categoryId: String?,
+        month: YearMonth?,
+        monthlyLimit: Money?,
+        record: (String) -> Unit,
+    ): String {
+        val scopeKey = categoryId ?: Budget.OVERALL_SCOPE
+        val existing = budgets.value.firstOrNull { it.scopeKey == scopeKey && it.month == month }
+        val id = existing?.id ?: "budget-${budgets.value.size + 1}"
+        budgets.value = budgets.value.filterNot { it.id == id } + Budget(
+            id = id,
+            categoryId = categoryId,
+            month = month,
+            monthlyLimit = monthlyLimit,
+            updatedAt = LocalDateTime.now(),
+        )
+        record(id)
+        return id
     }
 }
 

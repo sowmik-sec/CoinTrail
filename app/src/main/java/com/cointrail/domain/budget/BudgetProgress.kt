@@ -54,10 +54,12 @@ data class BudgetProgress(
 object BudgetProgressCalculator {
 
     /**
-     * Builds the progress rows for the current month. The overall budget (null [Budget.categoryId])
-     * is measured against [overallSpent]; a category budget against its entry in [spentByCategory]
-     * (0 when the category has no spending yet). Input order is preserved so the caller decides
-     * whether the overall bar comes first.
+     * Builds the progress rows for a month's spending. [budgets] are the month's effective budgets
+     * as resolved by [EffectiveBudgets] — every row carries a positive limit; "no budget" scopes
+     * never reach this far. The overall budget (null [Budget.categoryId]) is measured against
+     * [overallSpent]; a category budget against its entry in [spentByCategory] (0 when the category
+     * has no spending yet). Input order is preserved so the caller decides whether the overall bar
+     * comes first.
      */
     fun calculate(
         budgets: List<Budget>,
@@ -74,7 +76,7 @@ object BudgetProgressCalculator {
             budgetId = budget.id,
             categoryId = budget.categoryId,
             label = labelFor(budget.categoryId),
-            limit = budget.monthlyLimit,
+            limit = requireNotNull(budget.monthlyLimit) { "Progress needs a limit-bearing budget" },
             spent = spent,
         )
     }

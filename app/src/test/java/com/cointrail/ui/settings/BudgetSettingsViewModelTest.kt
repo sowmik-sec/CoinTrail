@@ -66,7 +66,7 @@ class BudgetSettingsViewModelTest {
 
         vm.setLimit(null, "2000")
 
-        assertEquals(listOf<Pair<String?, Money>>(null to Money(200_000)), budgets.sets)
+        assertEquals(listOf<Pair<String?, Money>>(null to Money(200_000)), budgets.defaultSets)
         assertEquals(Money(200_000), vm.state.value.rows.first().limit)
     }
 
@@ -77,7 +77,7 @@ class BudgetSettingsViewModelTest {
 
         vm.setLimit("preset-food", "৳1,250.50")
 
-        assertEquals(listOf<Pair<String?, Money>>("preset-food" to Money(125_050)), budgets.sets)
+        assertEquals(listOf<Pair<String?, Money>>("preset-food" to Money(125_050)), budgets.defaultSets)
         assertEquals(Money(125_050), vm.state.value.rows.first { it.categoryId == "preset-food" }.limit)
     }
 
@@ -91,7 +91,7 @@ class BudgetSettingsViewModelTest {
         vm.setLimit(null, "abc")
         vm.setLimit(null, "0")
 
-        assertTrue(budgets.sets.isEmpty())
+        assertTrue(budgets.defaultSets.isEmpty())
     }
 
     @Test

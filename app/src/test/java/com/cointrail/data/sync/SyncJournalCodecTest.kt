@@ -48,6 +48,14 @@ class SyncJournalCodecTest {
         budgets = listOf(
             Budget(id = "b1", categoryId = null, monthlyLimit = Money(2_000_000), updatedAt = t0),
             Budget(id = "b2", categoryId = "preset-food", monthlyLimit = Money(500_000), updatedAt = t1, deletedAt = t1),
+            Budget(
+                id = "b3", categoryId = "preset-food", month = YearMonth.of(2026, 11),
+                monthlyLimit = Money(900_000), updatedAt = t1,
+            ),
+            Budget(
+                id = "b4", categoryId = null, month = YearMonth.of(2026, 12),
+                monthlyLimit = null, updatedAt = t1,
+            ),
         ),
         recurring = listOf(
             RecurringSeries(
@@ -89,6 +97,35 @@ class SyncJournalCodecTest {
 
         assertEquals(125_050L, expense.getLong("amountPaisa"))
         assertTrue(expense.getString("occurredAt").startsWith("2026-10-01T09:00"))
+    }
+
+    @Test
+    fun `budget rows carry their month and a no-budget row carries a null limit`() {
+        val root = JSONObject(SyncJournalCodec.encode(fullJournal()))
+        val budgets = root.getJSONArray("budgets")
+
+        assertTrue(budgets.getJSONObject(0).isNull("month"))
+        assertEquals("2026-11", budgets.getJSONObject(2).getString("month"))
+        assertEquals(900_000L, budgets.getJSONObject(2).getLong("monthlyLimitPaisa"))
+        assertTrue(budgets.getJSONObject(3).isNull("monthlyLimitPaisa"))
+    }
+
+    @Test
+    fun `a budget row without a month field reads as the default budget`() {
+        // A file written before per-month budgets has no month key at all (Q49).
+        val json = """
+            {"format":"${SyncJournalCodec.FORMAT}","version":1,"budgets":[
+                {"id":"b1","categoryId":null,"monthlyLimitPaisa":2000000,
+                 "updatedAt":"2026-10-01T09:00:00","deletedAt":null}
+            ]}
+        """.trimIndent()
+
+        val decoded = SyncJournalCodec.decode(json)
+
+        assertEquals(
+            listOf(Budget(id = "b1", categoryId = null, monthlyLimit = Money(2_000_000), updatedAt = t0)),
+            decoded.budgets,
+        )
     }
 
     @Test

@@ -78,10 +78,22 @@ interface BudgetStore {
 
     fun observeAll(): Flow<List<Budget>>
 
-    /** Sets (or replaces) the monthly limit for a scope; `categoryId` null is the overall budget. */
-    suspend fun set(categoryId: String?, monthlyLimit: Money): String
+    /**
+     * Sets (or replaces) a scope's **default budget** — the standing monthly limit that governs
+     * every month without an override; `categoryId` null is the overall budget.
+     */
+    suspend fun setDefault(categoryId: String?, monthlyLimit: Money): String
 
-    /** Clears a budget; the row is tombstoned so sync can propagate the removal. */
+    /** Sets (or replaces) a month's budget override limit for a scope; any month, past or future. */
+    suspend fun setOverride(categoryId: String?, month: YearMonth, monthlyLimit: Money): String
+
+    /** Marks a month as explicitly "no budget" for a scope — distinct from removing an override. */
+    suspend fun setNoBudget(categoryId: String?, month: YearMonth): String
+
+    /** Removes a month's override, handing that month back to the default; a no-op without one. */
+    suspend fun removeOverride(categoryId: String?, month: YearMonth)
+
+    /** Tombstones a budget row so sync can propagate the removal. */
     suspend fun clear(id: String)
 }
 

@@ -135,7 +135,7 @@ class CatalogRepositoriesTest {
 
     @Test
     fun `overall budget round-trips null categoryId and clear tombstones`() = runBlocking {
-        budgets.set(null, Money(2_000_000))
+        budgets.setDefault(null, Money(2_000_000))
 
         val all = budgets.observeAll().first()
         assertEquals(1, all.size)
@@ -148,8 +148,8 @@ class CatalogRepositoriesTest {
 
     @Test
     fun `setting same scope twice replaces the limit`() = runBlocking {
-        budgets.set("preset-food", Money(500_000))
-        budgets.set("preset-food", Money(600_000))
+        budgets.setDefault("preset-food", Money(500_000))
+        budgets.setDefault("preset-food", Money(600_000))
 
         val all = budgets.observeAll().first()
         assertEquals(1, all.size)
@@ -158,10 +158,10 @@ class CatalogRepositoriesTest {
 
     @Test
     fun `re-setting a cleared budget reuses its row instead of dropping the tombstone`() = runBlocking {
-        val first = budgets.set("preset-food", Money(500_000))
+        val first = budgets.setDefault("preset-food", Money(500_000))
         budgets.clear(first)
 
-        val second = budgets.set("preset-food", Money(700_000))
+        val second = budgets.setDefault("preset-food", Money(700_000))
 
         assertEquals(first, second)
         val all = budgets.observeAll().first()
@@ -170,6 +170,102 @@ class CatalogRepositoriesTest {
         val changes = budgets.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
         assertEquals(1, changes.size)
         assertNull(changes.first().deletedAt)
+    }
+
+    @Test
+    fun `a month override coexists with the default and replaces only its own month`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        val november = YearMonth.of(2026, 11)
+        budgets.setDefault("preset-food", Money(500_000))
+
+        val overrideId = budgets.setOverride("preset-food", october, Money(900_000))
+        budgets.setOverride("preset-food", november, Money(400_000))
+
+        val all = budgets.observeAll().first().sortedBy { it.month }
+        assertEquals(3, all.size)
+        val octoberRow = all.first { it.month == october }
+        assertEquals(overrideId, octoberRow.id)
+        assertEquals(Money(900_000), octoberRow.monthlyLimit)
+        assertEquals(Money(500_000), all.first { it.month == null }.monthlyLimit)
+    }
+
+    @Test
+    fun `setting an override twice replaces the month's row`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        budgets.setDefault("preset-food", Money(500_000))
+
+        budgets.setOverride("preset-food", october, Money(900_000))
+        budgets.setOverride("preset-food", october, Money(800_000))
+
+        val all = budgets.observeAll().first()
+        assertEquals(2, all.size)
+        assertEquals(Money(800_000), all.first { it.month == october }.monthlyLimit)
+    }
+
+    @Test
+    fun `setNoBudget stores the explicit null-limit row for the month`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        budgets.setDefault(null, Money(2_000_000))
+
+        budgets.setNoBudget("preset-food", october)
+
+        val row = budgets.observeAll().first().first { it.categoryId == "preset-food" }
+        assertEquals(october, row.month)
+        assertNull(row.monthlyLimit)
+    }
+
+    @Test
+    fun `removeOverride tombstones the override so the default governs the month again`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        budgets.setDefault("preset-food", Money(500_000))
+        budgets.setOverride("preset-food", october, Money(900_000))
+
+        budgets.removeOverride("preset-food", october)
+
+        val live = budgets.observeAll().first()
+        assertEquals(1, live.size)
+        assertNull(live.single().month)
+        val changes = budgets.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
+        val overrideChange = changes.first { it.month == october }
+        assertNotNull(overrideChange.deletedAt)
+    }
+
+    @Test
+    fun `removeOverride on the explicit no-budget row also returns the month to the default`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        budgets.setDefault(null, Money(2_000_000))
+        budgets.setNoBudget("preset-food", october)
+
+        budgets.removeOverride("preset-food", october)
+
+        val live = budgets.observeAll().first()
+        assertEquals(1, live.size)
+        assertEquals(null, live.single().categoryId)
+    }
+
+    @Test
+    fun `removeOverride without any override is a no-op`() = runBlocking {
+        budgets.setDefault("preset-food", Money(500_000))
+
+        budgets.removeOverride("preset-food", YearMonth.of(2026, 10))
+        budgets.removeOverride("preset-transport", YearMonth.of(2026, 10))
+
+        assertEquals(1, budgets.observeAll().first().size)
+    }
+
+    @Test
+    fun `re-setting a removed override revives its row instead of duplicating it`() = runBlocking {
+        val october = YearMonth.of(2026, 10)
+        budgets.setDefault("preset-food", Money(500_000))
+        val first = budgets.setOverride("preset-food", october, Money(900_000))
+        budgets.removeOverride("preset-food", october)
+
+        val second = budgets.setOverride("preset-food", october, Money(700_000))
+
+        assertEquals(first, second)
+        val rows = budgets.observeAll().first()
+        assertEquals(2, rows.size)
+        assertEquals(Money(700_000), rows.first { it.month == october }.monthlyLimit)
     }
 
     @Test

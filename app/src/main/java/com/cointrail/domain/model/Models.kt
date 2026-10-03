@@ -51,15 +51,46 @@ data class PaymentMethod(
     }
 }
 
+/**
+ * One budget row for a scope (overall or a category): either the scope's **default budget**
+ * ([month] null, the standing monthly limit) or a **budget override** for one month (SPEC §6.5).
+ * An override carries either an explicit positive limit or a null limit — the explicit
+ * "no budget for this month" state, which is distinct from a tombstone (an override removed).
+ */
 data class Budget(
     val id: String = UUID.randomUUID().toString(),
     val categoryId: String?,
-    val monthlyLimit: Money,
+    val month: YearMonth? = null,
+    val monthlyLimit: Money?,
     val updatedAt: LocalDateTime,
     val deletedAt: LocalDateTime? = null,
 ) {
     init {
-        require(monthlyLimit > Money.ZERO) { "Budget limit must be positive" }
+        if (month == null) {
+            require(monthlyLimit != null && monthlyLimit > Money.ZERO) {
+                "A default budget must have a positive limit"
+            }
+        } else {
+            require(monthlyLimit == null || monthlyLimit > Money.ZERO) {
+                "A budget override's limit must be positive when present"
+            }
+        }
+    }
+
+    val isDeleted: Boolean get() = deletedAt != null
+
+    /** True when this row is a scope's default budget rather than a month's override. */
+    val isDefault: Boolean get() = month == null
+
+    /** True when this row marks a month as explicitly having no budget (SPEC §6.5). */
+    val isNoBudget: Boolean get() = month != null && monthlyLimit == null
+
+    /** The scope this budget governs: a category, or [OVERALL_SCOPE] for the overall budget. */
+    val scopeKey: String get() = categoryId ?: OVERALL_SCOPE
+
+    companion object {
+        /** The scope key of the overall (non-category) budget; stable across sync and storage. */
+        const val OVERALL_SCOPE: String = "__overall__"
     }
 }
 

@@ -3,7 +3,6 @@ package com.cointrail.data.repo
 import com.cointrail.core.Money
 import com.cointrail.data.SeedData
 import com.cointrail.data.db.BudgetDao
-import com.cointrail.data.db.BudgetEntity
 import com.cointrail.data.db.CategoryDao
 import com.cointrail.data.db.PaymentMethodDao
 import com.cointrail.data.db.RecurringSeriesDao
@@ -96,12 +95,37 @@ class BudgetRepository(
     override fun observeAll(): Flow<List<Budget>> =
         dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    override suspend fun set(categoryId: String?, monthlyLimit: Money): String {
-        val scopeKey = categoryId ?: BudgetEntity.OVERALL
-        val existing = dao.byScopeKey(scopeKey)
+    override suspend fun setDefault(categoryId: String?, monthlyLimit: Money): String =
+        upsertScopeMonth(categoryId, month = null, monthlyLimit = monthlyLimit)
+
+    override suspend fun setOverride(categoryId: String?, month: YearMonth, monthlyLimit: Money): String =
+        upsertScopeMonth(categoryId, month = month, monthlyLimit = monthlyLimit)
+
+    override suspend fun setNoBudget(categoryId: String?, month: YearMonth): String =
+        upsertScopeMonth(categoryId, month = month, monthlyLimit = null)
+
+    override suspend fun removeOverride(categoryId: String?, month: YearMonth) {
+        val existing = dao.byScopeAndMonth(scopeKey(categoryId), month.toString()) ?: return
+        // The tombstone is the "override removed" marker; only a live row still needs one.
+        if (existing.deletedAt != null) return
+        dao.softDelete(existing.id, now())
+    }
+
+    override suspend fun clear(id: String) {
+        dao.softDelete(id, now())
+    }
+
+    /**
+     * Writes one (scope, month) row, reusing whatever row already exists for the key — a live one
+     * to replace it, a tombstoned one to bring it back — so the unique (scope, month) key always
+     * holds exactly one row and its sync history keeps its id.
+     */
+    private suspend fun upsertScopeMonth(categoryId: String?, month: YearMonth?, monthlyLimit: Money?): String {
+        val existing = dao.byScopeAndMonth(scopeKey(categoryId), month?.toString())
         val budget = Budget(
             id = existing?.id ?: UUID.randomUUID().toString(),
             categoryId = categoryId,
+            month = month,
             monthlyLimit = monthlyLimit,
             updatedAt = now(),
         )
@@ -109,9 +133,7 @@ class BudgetRepository(
         return budget.id
     }
 
-    override suspend fun clear(id: String) {
-        dao.softDelete(id, now())
-    }
+    private fun scopeKey(categoryId: String?): String = categoryId ?: Budget.OVERALL_SCOPE
 
     suspend fun changesSince(since: LocalDateTime): List<Budget> =
         dao.changesSince(since).map { it.toDomain() }

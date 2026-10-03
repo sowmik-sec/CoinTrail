@@ -154,8 +154,8 @@ interface BudgetDao {
         upsertAll(budgets)
     }
 
-    @Query("SELECT * FROM budgets WHERE scopeKey = :scopeKey")
-    suspend fun byScopeKey(scopeKey: String): BudgetEntity?
+    @Query("SELECT * FROM budgets WHERE scopeKey = :scopeKey AND month IS :month")
+    suspend fun byScopeAndMonth(scopeKey: String, month: String?): BudgetEntity?
 
     @Query("SELECT * FROM budgets WHERE deletedAt IS NULL ORDER BY scopeKey ASC")
     fun observeAll(): Flow<List<BudgetEntity>>

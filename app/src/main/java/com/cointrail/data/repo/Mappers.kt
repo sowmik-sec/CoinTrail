@@ -56,7 +56,8 @@ internal fun PaymentMethod.toEntity(): PaymentMethodEntity = PaymentMethodEntity
 internal fun BudgetEntity.toDomain(): Budget = Budget(
     id = id,
     categoryId = if (scopeKey == BudgetEntity.OVERALL) null else scopeKey,
-    monthlyLimit = Money(monthlyLimitPaisa),
+    month = month?.let(YearMonth::parse),
+    monthlyLimit = monthlyLimitPaisa?.let(::Money),
     updatedAt = updatedAt,
     deletedAt = deletedAt,
 )
@@ -64,7 +65,8 @@ internal fun BudgetEntity.toDomain(): Budget = Budget(
 internal fun Budget.toEntity(): BudgetEntity = BudgetEntity(
     id = id,
     scopeKey = categoryId ?: BudgetEntity.OVERALL,
-    monthlyLimitPaisa = monthlyLimit.paisa,
+    month = month?.toString(),
+    monthlyLimitPaisa = monthlyLimit?.paisa,
     updatedAt = updatedAt,
     deletedAt = deletedAt,
 )

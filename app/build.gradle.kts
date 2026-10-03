@@ -79,6 +79,7 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
 }
 
 ksp {

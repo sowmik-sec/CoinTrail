@@ -58,11 +58,11 @@ class BudgetSettingsViewModel(
         BudgetSettingsUiState(rows = rows)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, BudgetSettingsUiState())
 
-    /** Parses and saves a limit for a scope; blank or non-positive input is ignored. */
+    /** Parses and saves a default limit for a scope; blank or non-positive input is ignored. */
     fun setLimit(categoryId: String?, input: String) {
         val money = Money.fromTaka(input) ?: return
         if (money <= Money.ZERO) return
-        viewModelScope.launch { budgets.set(categoryId, money) }
+        viewModelScope.launch { budgets.setDefault(categoryId, money) }
     }
 
     /** Removes the budget for a scope; a scope without one is a no-op. */

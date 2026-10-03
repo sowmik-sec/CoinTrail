@@ -8,28 +8,31 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 /**
- * The single seam that decides which budgets govern a month (issue 14, ticket 15). Today every row
- * is a default budget, so resolution passes live rows through unchanged — Home and the Monthly
- * report read their limits through here instead of the raw budget list.
+ * The single seam that decides which budgets govern a given month (SPEC §6.5): a month's override
+ * wins over the scope's default, an explicit "no budget" month contributes nothing, and a removed
+ * override hands the month back to the default. Home, the Monthly report and threshold planning all
+ * read their limits through here.
  */
 class EffectiveBudgetsTest {
 
     private val ts: LocalDateTime = LocalDateTime.of(2026, 10, 1, 0, 0)
     private val october: YearMonth = YearMonth.of(2026, 10)
+    private val november: YearMonth = YearMonth.of(2026, 11)
 
-    private fun budget(id: String, categoryId: String?, paisa: Long, deletedAt: LocalDateTime? = null) =
-        Budget(
-            id = id,
-            categoryId = categoryId,
-            monthlyLimit = Money(paisa),
-            updatedAt = ts,
-            deletedAt = deletedAt,
-        )
+    private fun default(id: String, categoryId: String?, paisa: Long) = Budget(
+        id = id, categoryId = categoryId, monthlyLimit = Money(paisa), updatedAt = ts,
+    )
+
+    private fun override(id: String, categoryId: String?, month: YearMonth, paisa: Long?) = Budget(
+        id = id, categoryId = categoryId, month = month, monthlyLimit = paisa?.let(::Money), updatedAt = ts,
+    )
+
+    private fun cleared(budget: Budget) = budget.copy(deletedAt = ts)
 
     @Test
-    fun `every live budget governs any month while all rows are defaults`() {
-        val overall = budget("overall", null, 200_000)
-        val food = budget("food", "preset-food", 100_000)
+    fun `defaults govern every month without an override`() {
+        val overall = default("overall", null, 200_000)
+        val food = default("food", "preset-food", 100_000)
 
         assertEquals(
             listOf(overall, food),
@@ -37,16 +40,78 @@ class EffectiveBudgetsTest {
         )
         assertEquals(
             listOf(overall, food),
-            EffectiveBudgets.forMonth(listOf(overall, food), YearMonth.of(2025, 3)),
+            EffectiveBudgets.forMonth(listOf(overall, food), november),
+        )
+    }
+
+    @Test
+    fun `a month's override wins over the default of its own scope`() {
+        val overall = default("overall", null, 200_000)
+        val shopping = default("shopping", "preset-shopping", 100_000)
+        val eid = override("eid", "preset-shopping", october, 900_000)
+
+        val resolved = EffectiveBudgets.forMonth(listOf(overall, shopping, eid), october)
+
+        assertEquals(listOf("overall", "eid"), resolved.map { it.id })
+        assertEquals(Money(900_000), resolved.last().monthlyLimit)
+    }
+
+    @Test
+    fun `an override governs only its own month`() {
+        val food = default("food", "preset-food", 100_000)
+        val eid = override("eid", "preset-food", october, 900_000)
+
+        val november = EffectiveBudgets.forMonth(listOf(food, eid), november)
+
+        assertEquals(listOf("food"), november.map { it.id })
+    }
+
+    @Test
+    fun `a no-budget month contributes nothing for its scope while others still govern`() {
+        val overall = default("overall", null, 200_000)
+        val food = default("food", "preset-food", 100_000)
+        val quiet = override("quiet", "preset-food", october, null)
+
+        assertEquals(
+            listOf(overall),
+            EffectiveBudgets.forMonth(listOf(overall, food, quiet), october),
+        )
+    }
+
+    @Test
+    fun `a removed override hands the month back to the default`() {
+        val food = default("food", "preset-food", 100_000)
+        val abandoned = cleared(override("eid", "preset-food", october, 900_000))
+
+        assertEquals(
+            listOf("food"),
+            EffectiveBudgets.forMonth(listOf(food, abandoned), october).map { it.id },
+        )
+    }
+
+    @Test
+    fun `a cleared default leaves the month with no budget`() {
+        val cleared = cleared(default("overall", null, 200_000))
+
+        assertEquals(emptyList<Budget>(), EffectiveBudgets.forMonth(listOf(cleared), october))
+    }
+
+    @Test
+    fun `an override can govern a month for a scope with no default`() {
+        val trip = override("trip", "preset-transport", october, 300_000)
+
+        assertEquals(
+            listOf("trip"),
+            EffectiveBudgets.forMonth(listOf(trip), october).map { it.id },
         )
     }
 
     @Test
     fun `tombstoned budgets never govern a month`() {
-        val live = budget("overall", null, 200_000)
-        val cleared = budget("food", "preset-food", 100_000, deletedAt = ts)
+        val live = default("overall", null, 200_000)
+        val clearedFood = cleared(default("food", "preset-food", 100_000))
 
-        assertEquals(listOf(live), EffectiveBudgets.forMonth(listOf(live, cleared), october))
+        assertEquals(listOf(live), EffectiveBudgets.forMonth(listOf(live, clearedFood), october))
     }
 
     @Test
