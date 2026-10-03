@@ -9,6 +9,7 @@ import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.budget.BudgetProgressCalculator
+import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.DailyTotal
@@ -127,7 +128,7 @@ class MonthlyReportsViewModel(
                 )
             },
             budgets = BudgetProgressCalculator.forMonth(
-                budgets = budgetList,
+                budgets = EffectiveBudgets.forMonth(budgetList, monthData.month),
                 categories = categoryList,
                 overallSpent = comparison.currentTotal,
                 spentByCategory = comparison.categories.associate { it.categoryId to it.current },

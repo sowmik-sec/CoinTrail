@@ -10,6 +10,7 @@ import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.budget.BudgetProgressCalculator
+import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
@@ -127,7 +128,7 @@ class HomeViewModel(
                 )
             },
             budgets = BudgetProgressCalculator.forMonth(
-                budgets = budgetList,
+                budgets = EffectiveBudgets.forMonth(budgetList, YearMonth.from(date)),
                 categories = categoryList,
                 overallSpent = snapshot.monthTotal,
                 spentByCategory = snapshot.categoryTotals.associate { it.categoryId to it.total },
