@@ -112,7 +112,7 @@ class BudgetSettingsViewModelTest {
         val vm = viewModel(budgets)
         vm.selectMonth(october)
 
-        vm.setMonthLimit("preset-food", "\u09f3900")
+        vm.setMonthLimit("preset-food", "৳900")
 
         assertEquals(emptyList<Pair<String?, Money>>(), budgets.defaultSets)
         assertEquals(
