@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -26,6 +27,9 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Draw behind the system bars on every API level (Android 15 enforces it anyway), so Home's
+        // hero reaches the top edge and each screen pads its own insets.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val container = (application as CoinTrailApplication).container
         // Seed, generate due recurring expenses, then sync — sequentially, so the journal snapshot

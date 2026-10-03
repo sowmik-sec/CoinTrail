@@ -1,6 +1,9 @@
 package com.cointrail.ui
 
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -9,9 +12,11 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -85,6 +90,10 @@ fun CoinTrailApp(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // Each screen owns the top inset: drill-ins pad it in their top bar, Home draws its hero
+        // behind the status bar.
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets
+            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
         bottomBar = {
             if (isTopLevel) {
                 NavigationBar {
@@ -101,7 +110,11 @@ fun CoinTrailApp(
         },
         floatingActionButton = {
             if (isTopLevel) {
-                FloatingActionButton(onClick = { navController.navigate(Destination.QuickAdd.route) }) {
+                FloatingActionButton(
+                    onClick = { navController.navigate(Destination.QuickAdd.route) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ) {
                     Icon(Icons.Filled.Add, contentDescription = "Add expense")
                 }
             }
@@ -110,7 +123,7 @@ fun CoinTrailApp(
         AppNavHost(
             container = container,
             navController = navController,
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         )
     }
 }

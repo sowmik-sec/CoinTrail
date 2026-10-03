@@ -149,7 +149,6 @@ fun DayScreen(
                 ) {
                     items(state.rows, key = { it.id }) { row ->
                         SwipeToDeleteRow(row = row, onClick = { onExpenseClick(row.id) }, onDelete = onDelete)
-                        HorizontalDivider()
                     }
                 }
             }
