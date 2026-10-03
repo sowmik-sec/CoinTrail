@@ -46,15 +46,15 @@ class SharedPreferencesBudgetAlertStore(context: Context) : BudgetAlertStore {
 
     private fun prefsKey(month: YearMonth): String = "$PREFIX$month"
 
-    private fun encode(key: BudgetAlertKey): String = "${key.budgetId}$SEPARATOR${key.level.name}"
+    private fun encode(key: BudgetAlertKey): String = "${key.scopeKey}$SEPARATOR${key.level.name}"
 
     private fun decode(raw: String): BudgetAlertKey? {
         val separator = raw.lastIndexOf(SEPARATOR)
         if (separator < 0) return null
-        val budgetId = raw.substring(0, separator).ifEmpty { return null }
+        val scopeKey = raw.substring(0, separator).ifEmpty { return null }
         val level = runCatching { BudgetAlertLevel.valueOf(raw.substring(separator + 1)) }.getOrNull()
             ?: return null
-        return BudgetAlertKey(budgetId, level)
+        return BudgetAlertKey(scopeKey, level)
     }
 
     private companion object {

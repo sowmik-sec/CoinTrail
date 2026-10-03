@@ -81,9 +81,9 @@ class AndroidBudgetNotifier(context: Context) : BudgetNotifier {
         )
     }
 
-    /** Stable per budget and threshold, so a re-post replaces rather than stacks. */
+    /** Stable per scope and threshold, so a re-post replaces rather than stacks. */
     private fun notificationId(alert: BudgetAlert): Int =
-        alert.budgetId.hashCode() * 31 + alert.level.ordinal
+        alert.scopeKey.hashCode() * 31 + alert.level.ordinal
 
     private companion object {
         const val CHANNEL_ID = "budget_alerts"

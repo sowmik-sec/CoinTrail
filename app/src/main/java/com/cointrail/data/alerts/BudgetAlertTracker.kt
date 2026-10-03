@@ -7,10 +7,12 @@ import com.cointrail.domain.budget.BudgetProgress
 import java.time.YearMonth
 
 /**
- * Raises budget threshold notifications for the current month, at most once per budget and level.
- * The fired thresholds are read from [store] and recorded back, so repeated evaluation as spending
- * changes is safe and a threshold never fires twice in a month; a new month starts with a clean
- * slate and therefore re-arms (SPEC §6.5).
+ * Raises budget threshold notifications for the current month, at most once per scope and level
+ * (Q48). The fired thresholds are read from [store] and recorded back, so repeated evaluation as
+ * spending changes is safe and a threshold never fires twice in a month — including after a
+ * mid-month budget change, because the bookkeeping is keyed by scope, not by the budget row that
+ * happened to govern when the threshold fired. A new month starts with a clean slate and therefore
+ * re-arms (SPEC §6.5).
  *
  * Only alerts the [notifier] actually delivered are recorded, so a crossing that could not be shown
  * (for example the notification permission is not yet granted) still fires once it can be.
@@ -28,10 +30,10 @@ class BudgetAlertTracker(
         val delivered = mutableSetOf<BudgetAlertKey>()
         BudgetAlertEvaluator.plan(progress, store.firedFor(current)).forEach { alert ->
             if (!notifier.notify(alert)) return@forEach
-            delivered += BudgetAlertKey(alert.budgetId, alert.level)
-            // An exceeded alert subsumes the warning for the same budget.
+            delivered += BudgetAlertKey(alert.scopeKey, alert.level)
+            // An exceeded alert subsumes the warning for the same scope.
             if (alert.level == BudgetAlertLevel.EXCEEDED) {
-                delivered += BudgetAlertKey(alert.budgetId, BudgetAlertLevel.WARNING)
+                delivered += BudgetAlertKey(alert.scopeKey, BudgetAlertLevel.WARNING)
             }
         }
         if (delivered.isNotEmpty()) store.markFired(current, delivered)

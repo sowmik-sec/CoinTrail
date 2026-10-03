@@ -1,6 +1,7 @@
 package com.cointrail.domain.budget
 
 import com.cointrail.core.Money
+import com.cointrail.domain.model.Budget
 
 /** The two budget threshold crossings that raise a notification (SPEC §6.5). */
 enum class BudgetAlertLevel {
@@ -11,11 +12,19 @@ enum class BudgetAlertLevel {
     EXCEEDED,
 }
 
-/** Identifies a threshold that has already been alerted for one budget in a given month. */
-data class BudgetAlertKey(val budgetId: String, val level: BudgetAlertLevel)
+/**
+ * Identifies a threshold that has already been alerted for one scope in a given month (Q48). The
+ * month lives in the alert store's keying; the scope — not the budget row's id — lives here, so a
+ * mid-month budget change (a new limit, a new override row) can never re-arm a threshold that
+ * already fired for that scope and month.
+ */
+data class BudgetAlertKey(val scopeKey: String, val level: BudgetAlertLevel)
 
 data class BudgetAlert(
     val budgetId: String,
+
+    /** The scope the alert belongs to, for the (scope, month, threshold) fired bookkeeping. */
+    val scopeKey: String,
     val label: String,
     val level: BudgetAlertLevel,
     val limit: Money,
@@ -26,7 +35,7 @@ data class BudgetAlert(
 /**
  * Decides which threshold notifications are still owed for the current month, given the month's
  * progress and the thresholds already alerted. Budgets are evaluated independently; each threshold
- * fires at most once per budget per month.
+ * fires at most once per scope per month.
  *
  * A budget only ever reports its highest reached level, so jumping straight past the limit raises a
  * single exceeded alert rather than a warning and an exceeded alert at once.
@@ -41,10 +50,11 @@ object BudgetAlertEvaluator {
                 BudgetStatus.ON_TRACK -> null
             } ?: return@mapNotNull null
 
-            if (BudgetAlertKey(item.budgetId, reached) in alreadyFired) return@mapNotNull null
+            if (BudgetAlertKey(scopeKey(item.categoryId), reached) in alreadyFired) return@mapNotNull null
 
             BudgetAlert(
                 budgetId = item.budgetId,
+                scopeKey = scopeKey(item.categoryId),
                 label = item.label,
                 level = reached,
                 limit = item.limit,
@@ -52,4 +62,7 @@ object BudgetAlertEvaluator {
                 percent = item.percent,
             )
         }
+
+    /** The alert scope of a progress row: its category, or the overall scope. */
+    private fun scopeKey(categoryId: String?): String = categoryId ?: Budget.OVERALL_SCOPE
 }

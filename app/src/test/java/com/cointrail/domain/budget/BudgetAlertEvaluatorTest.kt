@@ -1,6 +1,7 @@
 package com.cointrail.domain.budget
 
 import com.cointrail.core.Money
+import com.cointrail.domain.model.Budget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,7 @@ class BudgetAlertEvaluatorTest {
         val alert = BudgetAlertEvaluator.plan(listOf(progress("b1", 8_000)), emptySet()).single()
 
         assertEquals("b1", alert.budgetId)
+        assertEquals("preset-food", alert.scopeKey)
         assertEquals("Food", alert.label)
         assertEquals(BudgetAlertLevel.WARNING, alert.level)
         assertEquals(Money(10_000), alert.limit)
@@ -39,14 +41,15 @@ class BudgetAlertEvaluatorTest {
 
     @Test
     fun `a warning already fired this month does not fire again`() {
-        val fired = setOf(BudgetAlertKey("b1", BudgetAlertLevel.WARNING))
+        // Fired keys are scoped: the progress row's category, not its row id.
+        val fired = setOf(BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING))
 
         assertTrue(BudgetAlertEvaluator.plan(listOf(progress("b1", 9_000)), fired).isEmpty())
     }
 
     @Test
     fun `crossing one hundred percent fires an exceeded alert after the warning`() {
-        val fired = setOf(BudgetAlertKey("b1", BudgetAlertLevel.WARNING))
+        val fired = setOf(BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING))
 
         val alert = BudgetAlertEvaluator.plan(listOf(progress("b1", 10_000)), fired).single()
 
@@ -63,11 +66,28 @@ class BudgetAlertEvaluatorTest {
     @Test
     fun `an exceeded alert already fired does not fire again`() {
         val fired = setOf(
-            BudgetAlertKey("b1", BudgetAlertLevel.WARNING),
-            BudgetAlertKey("b1", BudgetAlertLevel.EXCEEDED),
+            BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING),
+            BudgetAlertKey("preset-food", BudgetAlertLevel.EXCEEDED),
         )
 
         assertTrue(BudgetAlertEvaluator.plan(listOf(progress("b1", 20_000)), fired).isEmpty())
+    }
+
+    @Test
+    fun `a mid-month budget change never re-arms a crossed threshold`() {
+        // The month's budget was restated into a new row (new id, same scope) after the warning
+        // fired; the new row must not raise the warning again.
+        val fired = setOf(BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING))
+
+        assertTrue(BudgetAlertEvaluator.plan(listOf(progress("b2-restated", 9_000)), fired).isEmpty())
+    }
+
+    @Test
+    fun `a different scope is never silenced by another scope's fired threshold`() {
+        val other = progress("b1", 9_000).copy(categoryId = "preset-rent")
+        val fired = setOf(BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING))
+
+        assertEquals(1, BudgetAlertEvaluator.plan(listOf(other), fired).size)
     }
 
     @Test
@@ -101,5 +121,15 @@ class BudgetAlertEvaluatorTest {
     fun `reaching the threshold in a fresh month fires again`() {
         // A new month starts with an empty fired set, so the same progress alerts once more.
         assertEquals(1, BudgetAlertEvaluator.plan(listOf(progress("b1", 8_000)), emptySet()).size)
+    }
+
+    @Test
+    fun `the overall scope keys its alerts on the overall scope`() {
+        val overall = progress("overall", 500_000, limitPaisa = 500_000, label = "Overall")
+            .copy(categoryId = null)
+
+        val alert = BudgetAlertEvaluator.plan(listOf(overall), emptySet()).single()
+
+        assertEquals(Budget.OVERALL_SCOPE, alert.scopeKey)
     }
 }

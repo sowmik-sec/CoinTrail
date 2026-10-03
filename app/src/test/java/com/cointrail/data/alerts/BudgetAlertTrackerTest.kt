@@ -17,9 +17,14 @@ class BudgetAlertTrackerTest {
 
     private val october: YearMonth = YearMonth.of(2026, 10)
 
-    private fun progress(id: String, spentPaisa: Long, limitPaisa: Long = 10_000) = BudgetProgress(
+    private fun progress(
+        id: String,
+        spentPaisa: Long,
+        limitPaisa: Long = 10_000,
+        categoryId: String = "preset-food",
+    ) = BudgetProgress(
         budgetId = id,
-        categoryId = "preset-food",
+        categoryId = categoryId,
         label = "Food",
         limit = Money(limitPaisa),
         spent = Money(spentPaisa),
@@ -40,7 +45,7 @@ class BudgetAlertTrackerTest {
 
         assertEquals(listOf(BudgetAlertLevel.WARNING), notifier.alerts.map { it.level })
         assertEquals(
-            setOf(BudgetAlertKey("b1", BudgetAlertLevel.WARNING)),
+            setOf(BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING)),
             store.firedFor(october),
         )
     }
@@ -103,8 +108,78 @@ class BudgetAlertTrackerTest {
         assertEquals(listOf(BudgetAlertLevel.EXCEEDED), notifier.alerts.map { it.level })
         assertEquals(
             setOf(
-                BudgetAlertKey("b1", BudgetAlertLevel.WARNING),
-                BudgetAlertKey("b1", BudgetAlertLevel.EXCEEDED),
+                BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING),
+                BudgetAlertKey("preset-food", BudgetAlertLevel.EXCEEDED),
+            ),
+            store.firedFor(october),
+        )
+    }
+
+    @Test
+    fun `a mid-month budget change never re-arms a threshold already crossed`() = runTest {
+        val store = FakeBudgetAlertStore()
+        val notifier = FakeBudgetNotifier()
+        val tracker = tracker(store, notifier)
+
+        // The warning fires against the month's original budget row…
+        tracker.evaluate(listOf(progress("original-row", 8_500)))
+        assertEquals(1, notifier.alerts.size)
+
+        // …then the user restates the budget into a new row (new id, same scope) with a lower
+        // limit. The warning must not fire again even though spending is still past 80%; spending
+        // now crosses 100% of the *new* limit for the first time, so exceeded fires exactly once.
+        tracker.evaluate(listOf(progress("restated-row", 9_500, limitPaisa = 9_600)))
+        tracker.evaluate(listOf(progress("restated-row", 10_500, limitPaisa = 9_600)))
+        tracker.evaluate(listOf(progress("restated-row", 11_000, limitPaisa = 9_600)))
+
+        assertEquals(
+            listOf(BudgetAlertLevel.WARNING, BudgetAlertLevel.EXCEEDED),
+            notifier.alerts.map { it.level },
+        )
+        assertEquals(
+            setOf(
+                BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING),
+                BudgetAlertKey("preset-food", BudgetAlertLevel.EXCEEDED),
+            ),
+            store.firedFor(october),
+        )
+    }
+
+    @Test
+    fun `a budget removed mid-month does not un-bookkeep or re-arm the fired thresholds`() = runTest {
+        val store = FakeBudgetAlertStore()
+        val notifier = FakeBudgetNotifier()
+        val tracker = tracker(store, notifier)
+
+        tracker.evaluate(listOf(progress("original-row", 8_500)))
+        // "No budget" scopes drop out of progress entirely; evaluating without them changes nothing.
+        tracker.evaluate(emptyList())
+
+        assertEquals(1, notifier.alerts.size)
+        assertEquals(1, store.firedFor(october).size)
+    }
+
+    @Test
+    fun `each scope fires once and independently in the same month`() = runTest {
+        val store = FakeBudgetAlertStore()
+        val notifier = FakeBudgetNotifier()
+
+        tracker(store, notifier).evaluate(
+            listOf(
+                progress("food-row", 8_500, categoryId = "preset-food"),
+                progress("rent-row", 12_000, categoryId = "preset-rent"),
+            ),
+        )
+
+        assertEquals(
+            listOf(BudgetAlertLevel.WARNING, BudgetAlertLevel.EXCEEDED),
+            notifier.alerts.map { it.level },
+        )
+        assertEquals(
+            setOf(
+                BudgetAlertKey("preset-food", BudgetAlertLevel.WARNING),
+                BudgetAlertKey("preset-rent", BudgetAlertLevel.EXCEEDED),
+                BudgetAlertKey("preset-rent", BudgetAlertLevel.WARNING),
             ),
             store.firedFor(october),
         )
