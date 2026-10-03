@@ -4,10 +4,10 @@
 
 **Blocked by:** 18 Home and Monthly show effective budgets (shares the Home budget state path)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Alert identity is (scope, month, threshold): one notification per scope per month per threshold
-- [ ] A mid-month budget change — editing a limit, adding or removing an override — never re-arms a threshold already crossed for that scope and month
-- [ ] "No budget" months fire no alerts
-- [ ] Thresholds re-arm at the start of each new month
-- [ ] Alert bookkeeping remains device-local and never syncs
+- [x] Alert identity is (scope, month, threshold): one notification per scope per month per threshold
+- [x] A mid-month budget change — editing a limit, adding or removing an override — never re-arms a threshold already crossed for that scope and month
+- [x] "No budget" months fire no alerts
+- [x] Thresholds re-arm at the start of each new month
+- [x] Alert bookkeeping remains device-local and never syncs

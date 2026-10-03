@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A single domain entry point resolves the budgets governing a given month and feeds progress bars and threshold planning
-- [ ] Home passes the current month and the Monthly report passes the viewed month instead of consuming the raw budget list
-- [ ] All existing budget, alert and ViewModel tests stay green with unchanged behaviour
+- [x] A single domain entry point resolves the budgets governing a given month and feeds progress bars and threshold planning
+- [x] Home passes the current month and the Monthly report passes the viewed month instead of consuming the raw budget list
+- [x] All existing budget, alert and ViewModel tests stay green with unchanged behaviour

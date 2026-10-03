@@ -4,10 +4,10 @@
 
 **Blocked by:** 15 Prefactor — one effective-budget seam
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A (scope, month) row supports three states — explicit limit, "no budget" (null limit), and absent (inherit default) — and a tombstone means "override removed", never "no budget"
-- [ ] At most one row exists per (scope, month), the default included; default limits are always positive and override limits positive when present
-- [ ] Existing budgets migrate to default budgets, keeping their ids
-- [ ] Storage operations distinguish the four intents: set/replace default, set/replace a month's limit, set a month to "no budget", remove a month's override
-- [ ] Journal and backup round-trip month, limit and "no budget" rows; LWW merge is keyed by (scope, month), with tombstone-beats-live ties as before
+- [x] A (scope, month) row supports three states — explicit limit, "no budget" (null limit), and absent (inherit default) — and a tombstone means "override removed", never "no budget"
+- [x] At most one row exists per (scope, month), the default included; default limits are always positive and override limits positive when present
+- [x] Existing budgets migrate to default budgets, keeping their ids
+- [x] Storage operations distinguish the four intents: set/replace default, set/replace a month's limit, set a month to "no budget", remove a month's override
+- [x] Journal and backup round-trip month, limit and "no budget" rows; LWW merge is keyed by (scope, month), with tombstone-beats-live ties as before

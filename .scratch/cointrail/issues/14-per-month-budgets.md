@@ -1,6 +1,6 @@
 # 14: Per-month budgets (default budgets + budget overrides)
 
-**Status:** ready-for-agent
+**Status:** done (tickets 15–19)
 
 ## Problem Statement
 
