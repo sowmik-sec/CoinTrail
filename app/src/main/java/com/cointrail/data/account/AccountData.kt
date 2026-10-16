@@ -4,9 +4,8 @@ import android.content.Context
 import com.cointrail.data.db.CoinTrailDatabase
 import com.cointrail.data.recurring.RecurringExpenseGenerator
 import com.cointrail.data.repo.BudgetRepository
-import com.cointrail.data.repo.CategoryRepository
+import com.cointrail.data.repo.CatalogRepository
 import com.cointrail.data.repo.ExpenseRepository
-import com.cointrail.data.repo.PaymentMethodRepository
 import com.cointrail.data.repo.RecurringSeriesRepository
 import com.cointrail.data.sync.RoomSyncLocalStore
 import com.cointrail.data.sync.SyncLocalStore
@@ -25,8 +24,9 @@ class AccountData(
     private val database: CoinTrailDatabase = databaseFactory(key)
 
     val expenses: ExpenseRepository = ExpenseRepository(database.expenseDao())
-    val categories: CategoryRepository = CategoryRepository(database.categoryDao())
-    val paymentMethods: PaymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
+
+    /** The namespace's one catalog store over its two catalog tables (ticket 25). */
+    val catalogs: CatalogRepository = CatalogRepository(database.catalogDao())
     val budgets: BudgetRepository = BudgetRepository(database.budgetDao())
     val recurring: RecurringSeriesRepository = RecurringSeriesRepository(database.recurringSeriesDao())
 

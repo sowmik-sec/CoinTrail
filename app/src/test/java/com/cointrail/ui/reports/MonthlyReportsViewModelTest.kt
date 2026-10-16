@@ -9,6 +9,7 @@ import com.cointrail.testing.FakeBudgetStore
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
 import com.cointrail.testing.MainDispatcherRule
+import com.cointrail.testing.TEST_TIME
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,9 +29,9 @@ class MonthlyReportsViewModelTest {
     private val month: YearMonth = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 1, 12, 0)
 
-    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
-    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
-    private val transport = CatalogItem(id = "preset-transport", name = "Transport", isPreset = true)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true, updatedAt = TEST_TIME)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = TEST_TIME)
+    private val transport = CatalogItem(id = "preset-transport", name = "Transport", isPreset = true, updatedAt = TEST_TIME)
 
     private fun expense(
         id: String,

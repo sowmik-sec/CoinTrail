@@ -6,6 +6,7 @@ import com.cointrail.domain.model.CatalogItem
 import com.cointrail.testing.FakeBudgetStore
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.MainDispatcherRule
+import com.cointrail.testing.TEST_TIME
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,9 +27,9 @@ class BudgetSettingsViewModelTest {
     private val october: YearMonth = YearMonth.of(2026, 10)
     private val november: YearMonth = YearMonth.of(2026, 11)
 
-    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
-    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
-    private val shopping = CatalogItem(id = "preset-shopping", name = "Shopping", isPreset = true, isHidden = true)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true, updatedAt = TEST_TIME)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = TEST_TIME)
+    private val shopping = CatalogItem(id = "preset-shopping", name = "Shopping", isPreset = true, isHidden = true, updatedAt = TEST_TIME)
 
     private fun budget(id: String, categoryId: String?, month: YearMonth?, paisa: Long?) = Budget(
         id = id,

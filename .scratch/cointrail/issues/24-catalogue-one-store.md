@@ -4,7 +4,7 @@
 
 **Blocked by:** 23 Prefactor — one journal-table registry
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One store serves both lists: observing, adding, renaming, hiding and seeding behave identically for a category and for a payment method
 - [ ] Hidden items stay out of every picker, and that filtering is declared in one place

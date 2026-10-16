@@ -3,13 +3,10 @@ package com.cointrail.data.repo
 import com.cointrail.core.Money
 import com.cointrail.data.SeedData
 import com.cointrail.data.db.BudgetDao
-import com.cointrail.data.db.CategoryDao
-import com.cointrail.data.db.PaymentMethodDao
+import com.cointrail.data.db.CatalogDao
 import com.cointrail.data.db.RecurringSeriesDao
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,107 +15,65 @@ import java.time.YearMonth
 import java.util.UUID
 
 /**
- * One catalog store serving both lists (ticket 24): each kind reads and writes through its twin
- * repository underneath, so the two tables, the two preset ID sets and the two journal keys are
- * untouched. The screens see only this store and never the twins.
+ * The one catalog store implementation, serving both lists (ticket 25): both physical tables behind
+ * one [CatalogDao] and one row concept, keyed by [CatalogKind]. Hidden items are returned (the
+ * manage screens toggle them); pickers take a list's [visible] rows.
  */
-class RepositoryBackedCatalogStore(
-    private val categories: CategoryRepository,
-    private val paymentMethods: PaymentMethodRepository,
+class CatalogRepository(
+    private val dao: CatalogDao,
+    private val now: () -> LocalDateTime = { LocalDateTime.now() },
 ) : CatalogStore {
 
     override fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>> = when (kind) {
-        CatalogKind.CATEGORIES -> categories.observeAll().map { list -> list.map { it.toItem() } }
-        CatalogKind.PAYMENT_METHODS -> paymentMethods.observeAll().map { list -> list.map { it.toItem() } }
+        CatalogKind.CATEGORIES -> dao.observeAllCategories().map { rows -> rows.map { it.toCatalogItem() } }
+        CatalogKind.PAYMENT_METHODS ->
+            dao.observeAllPaymentMethods().map { rows -> rows.map { it.toCatalogItem() } }
     }
 
-    override suspend fun add(kind: CatalogKind, name: String): String = when (kind) {
-        CatalogKind.CATEGORIES -> categories.add(name)
-        CatalogKind.PAYMENT_METHODS -> paymentMethods.add(name)
-    }
-
-    override suspend fun rename(kind: CatalogKind, id: String, name: String) = when (kind) {
-        CatalogKind.CATEGORIES -> categories.rename(id, name)
-        CatalogKind.PAYMENT_METHODS -> paymentMethods.rename(id, name)
-    }
-
-    override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) = when (kind) {
-        CatalogKind.CATEGORIES -> categories.setHidden(id, hidden)
-        CatalogKind.PAYMENT_METHODS -> paymentMethods.setHidden(id, hidden)
-    }
-
-    override suspend fun ensureSeeded(kind: CatalogKind) = when (kind) {
-        CatalogKind.CATEGORIES -> categories.ensureSeeded()
-        CatalogKind.PAYMENT_METHODS -> paymentMethods.ensureSeeded()
-    }
-
-    private fun Category.toItem() = CatalogItem(id = id, name = name, isPreset = isPreset, isHidden = isHidden)
-
-    private fun PaymentMethod.toItem() = CatalogItem(id = id, name = name, isPreset = isPreset, isHidden = isHidden)
-}
-
-class CategoryRepository(
-    private val dao: CategoryDao,
-    private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) : CategoryStore {
-
-    override fun observeAll(): Flow<List<Category>> =
-        dao.observeAll().map { rows -> rows.map { it.toDomain() } }
-
-    suspend fun ensureSeeded() {
-        if (dao.count() == 0) {
-            // Seeded with SeedData's fixed timestamp, not "now": a fresh device must not out-stamp a
-            // preset rename or hide synced from another device in last-write-wins (SPEC §7).
-            dao.upsertAll(SeedData.categories.map { it.toEntity() })
+    /**
+     * Seeds the kind's presets exactly once, with [SeedData]'s fixed timestamp rather than "now": a
+     * fresh device must not out-stamp a preset rename or hide synced from another device in
+     * last-write-wins (SPEC §7).
+     */
+    override suspend fun ensureSeeded(kind: CatalogKind) {
+        val presets = when (kind) {
+            CatalogKind.CATEGORIES -> SeedData.categories
+            CatalogKind.PAYMENT_METHODS -> SeedData.paymentMethods
+        }
+        if (count(kind) == 0) {
+            write(kind, presets)
         }
     }
 
-    override suspend fun add(name: String): String {
-        val category = Category(name = name, sortOrder = dao.count(), updatedAt = now())
-        dao.upsert(category.toEntity())
-        return category.id
+    override suspend fun add(kind: CatalogKind, name: String): String {
+        val item = CatalogItem(name = name, sortOrder = count(kind), updatedAt = now())
+        write(kind, listOf(item))
+        return item.id
     }
 
-    override suspend fun rename(id: String, name: String) {
-        val existing = dao.byId(id) ?: return
-        dao.upsert(existing.toDomain().copy(name = name, updatedAt = now()).toEntity())
+    override suspend fun rename(kind: CatalogKind, id: String, name: String) {
+        val existing = byId(kind, id) ?: return
+        write(kind, listOf(existing.copy(name = name, updatedAt = now())))
     }
 
-    override suspend fun setHidden(id: String, hidden: Boolean) {
-        val existing = dao.byId(id) ?: return
-        dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
-    }
-}
-
-class PaymentMethodRepository(
-    private val dao: PaymentMethodDao,
-    private val now: () -> LocalDateTime = { LocalDateTime.now() },
-) : PaymentMethodStore {
-
-    override fun observeAll(): Flow<List<PaymentMethod>> =
-        dao.observeAll().map { rows -> rows.map { it.toDomain() } }
-
-    suspend fun ensureSeeded() {
-        if (dao.count() == 0) {
-            // Fixed seed timestamp, as with categories, so presets do not out-stamp synced edits.
-            dao.upsertAll(SeedData.paymentMethods.map { it.toEntity() })
-        }
+    override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) {
+        val existing = byId(kind, id) ?: return
+        write(kind, listOf(existing.copy(isHidden = hidden, updatedAt = now())))
     }
 
-    override suspend fun add(name: String): String {
-        val paymentMethod = PaymentMethod(name = name, sortOrder = dao.count(), updatedAt = now())
-        dao.upsert(paymentMethod.toEntity())
-        return paymentMethod.id
+    private suspend fun count(kind: CatalogKind): Int = when (kind) {
+        CatalogKind.CATEGORIES -> dao.categoryCount()
+        CatalogKind.PAYMENT_METHODS -> dao.paymentMethodCount()
     }
 
-    override suspend fun rename(id: String, name: String) {
-        val existing = dao.byId(id) ?: return
-        dao.upsert(existing.toDomain().copy(name = name, updatedAt = now()).toEntity())
+    private suspend fun byId(kind: CatalogKind, id: String): CatalogItem? = when (kind) {
+        CatalogKind.CATEGORIES -> dao.categoryById(id)?.toCatalogItem()
+        CatalogKind.PAYMENT_METHODS -> dao.paymentMethodById(id)?.toCatalogItem()
     }
 
-    override suspend fun setHidden(id: String, hidden: Boolean) {
-        val existing = dao.byId(id) ?: return
-        dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
+    private suspend fun write(kind: CatalogKind, rows: List<CatalogItem>) = when (kind) {
+        CatalogKind.CATEGORIES -> dao.upsertAllCategories(rows.map { it.toCategoryEntity() })
+        CatalogKind.PAYMENT_METHODS -> dao.upsertAllPaymentMethods(rows.map { it.toCatalogItemEntity() })
     }
 }
 

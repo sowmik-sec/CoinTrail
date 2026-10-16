@@ -3,11 +3,9 @@ package com.cointrail.data.repo
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
-import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
@@ -77,30 +75,6 @@ interface ExpenseStore {
 
     /** A one-shot snapshot of live expenses in `[from, to)`, for the CSV export. */
     suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense>
-}
-
-interface CategoryStore {
-
-    fun observeAll(): Flow<List<Category>>
-
-    suspend fun add(name: String): String
-
-    suspend fun rename(id: String, name: String)
-
-    /** Hides or shows the category; hidden ones disappear from pickers but keep their history. */
-    suspend fun setHidden(id: String, hidden: Boolean)
-}
-
-interface PaymentMethodStore {
-
-    fun observeAll(): Flow<List<PaymentMethod>>
-
-    suspend fun add(name: String): String
-
-    suspend fun rename(id: String, name: String)
-
-    /** Hides or shows the payment method; hidden ones disappear from pickers but keep their history. */
-    suspend fun setHidden(id: String, hidden: Boolean)
 }
 
 interface BudgetStore {

@@ -8,19 +8,15 @@ import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.repo.BudgetStore
 import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
-import com.cointrail.data.repo.CategoryStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.data.repo.RecurringStore
 import com.cointrail.domain.budget.BudgetAlert
 import com.cointrail.domain.budget.BudgetAlertKey
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
-import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -159,7 +155,8 @@ class FakeCatalogStore(
     override suspend fun add(kind: CatalogKind, name: String): String {
         addedNames += kind to name
         val id = UUID.randomUUID().toString()
-        lists.getValue(kind).value = lists.getValue(kind).value + CatalogItem(id = id, name = name)
+        lists.getValue(kind).value =
+            lists.getValue(kind).value + CatalogItem(id = id, name = name, updatedAt = LocalDateTime.now())
         return id
     }
 
@@ -177,62 +174,6 @@ class FakeCatalogStore(
 
     override suspend fun ensureSeeded(kind: CatalogKind) {
         seeded += kind
-    }
-}
-
-class FakeCategoryStore(initial: List<Category> = emptyList()) : CategoryStore {
-
-    private val categories = MutableStateFlow(initial)
-
-    val addedNames: MutableList<String> = mutableListOf()
-    val renames: MutableList<Pair<String, String>> = mutableListOf()
-    val hiddenChanges: MutableList<Pair<String, Boolean>> = mutableListOf()
-
-    override fun observeAll(): Flow<List<Category>> = categories
-
-    override suspend fun add(name: String): String {
-        addedNames += name
-        val id = UUID.randomUUID().toString()
-        categories.value = categories.value + Category(id = id, name = name, updatedAt = LocalDateTime.now())
-        return id
-    }
-
-    override suspend fun rename(id: String, name: String) {
-        renames += id to name
-        categories.value = categories.value.map { if (it.id == id) it.copy(name = name) else it }
-    }
-
-    override suspend fun setHidden(id: String, hidden: Boolean) {
-        hiddenChanges += id to hidden
-        categories.value = categories.value.map { if (it.id == id) it.copy(isHidden = hidden) else it }
-    }
-}
-
-class FakePaymentMethodStore(initial: List<PaymentMethod> = emptyList()) : PaymentMethodStore {
-
-    private val paymentMethods = MutableStateFlow(initial)
-
-    val addedNames: MutableList<String> = mutableListOf()
-    val renames: MutableList<Pair<String, String>> = mutableListOf()
-    val hiddenChanges: MutableList<Pair<String, Boolean>> = mutableListOf()
-
-    override fun observeAll(): Flow<List<PaymentMethod>> = paymentMethods
-
-    override suspend fun add(name: String): String {
-        addedNames += name
-        val id = UUID.randomUUID().toString()
-        paymentMethods.value = paymentMethods.value + PaymentMethod(id = id, name = name, updatedAt = LocalDateTime.now())
-        return id
-    }
-
-    override suspend fun rename(id: String, name: String) {
-        renames += id to name
-        paymentMethods.value = paymentMethods.value.map { if (it.id == id) it.copy(name = name) else it }
-    }
-
-    override suspend fun setHidden(id: String, hidden: Boolean) {
-        hiddenChanges += id to hidden
-        paymentMethods.value = paymentMethods.value.map { if (it.id == id) it.copy(isHidden = hidden) else it }
     }
 }
 

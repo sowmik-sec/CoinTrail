@@ -30,15 +30,24 @@ class CatalogStoreTest {
     @Before
     fun setUp() {
         db = CoinTrailDatabase.createInMemory(ApplicationProvider.getApplicationContext())
-        catalog = RepositoryBackedCatalogStore(
-            categories = CategoryRepository(db.categoryDao()),
-            paymentMethods = PaymentMethodRepository(db.paymentMethodDao()),
-        )
+        catalog = CatalogRepository(db.catalogDao())
     }
 
     @After
     fun tearDown() {
         db.close()
+    }
+
+    @Test
+    fun `seeding keeps the fixed preset timestamp so synced edits win`() = runBlocking {
+        catalog.ensureSeeded(CatalogKind.CATEGORIES)
+        catalog.ensureSeeded(CatalogKind.PAYMENT_METHODS)
+
+        val food = catalog.observeAll(CatalogKind.CATEGORIES).first().first { it.id == "preset-food" }
+        val cash = catalog.observeAll(CatalogKind.PAYMENT_METHODS).first().first { it.id == "pm-cash" }
+
+        assertEquals(SeedData.categories.first { it.id == "preset-food" }.updatedAt, food.updatedAt)
+        assertEquals(SeedData.paymentMethods.first { it.id == "pm-cash" }.updatedAt, cash.updatedAt)
     }
 
     @Test

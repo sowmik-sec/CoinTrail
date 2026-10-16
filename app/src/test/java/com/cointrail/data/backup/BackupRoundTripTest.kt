@@ -7,9 +7,8 @@ import com.cointrail.data.db.CoinTrailDatabase
 import com.cointrail.data.sync.RoomSyncLocalStore
 import com.cointrail.data.sync.SyncJournal
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -67,11 +66,11 @@ class BackupRoundTripTest {
     private fun sampleJournal() = SyncJournal(
         expenses = listOf(expense("e1", 125_050, t1), expense("e2", 9_900, t1, deleted = true)),
         categories = listOf(
-            Category(id = "preset-food", name = "Food", isPreset = true, isHidden = false, sortOrder = 0, updatedAt = t0),
-            Category(id = "cat-1", name = "Pets", isPreset = false, isHidden = true, sortOrder = 9, updatedAt = t1),
+            CatalogItem(id = "preset-food", name = "Food", isPreset = true, isHidden = false, sortOrder = 0, updatedAt = t0),
+            CatalogItem(id = "cat-1", name = "Pets", isPreset = false, isHidden = true, sortOrder = 9, updatedAt = t1),
         ),
         paymentMethods = listOf(
-            PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, isHidden = false, sortOrder = 0, updatedAt = t0),
+            CatalogItem(id = "pm-cash", name = "Cash", isPreset = true, isHidden = false, sortOrder = 0, updatedAt = t0),
         ),
         budgets = listOf(
             Budget(id = "b1", categoryId = null, monthlyLimit = Money(2_000_000), updatedAt = t0),

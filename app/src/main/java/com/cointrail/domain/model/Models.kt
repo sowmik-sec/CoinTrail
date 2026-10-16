@@ -25,41 +25,17 @@ data class Expense(
     val isDeleted: Boolean get() = deletedAt != null
 }
 
-data class Category(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val isPreset: Boolean = false,
-    val isHidden: Boolean = false,
-    val sortOrder: Int = 0,
-    val updatedAt: LocalDateTime,
-) {
-    init {
-        require(name.isNotBlank()) { "Category name must not be blank" }
-    }
-}
-
-data class PaymentMethod(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val isPreset: Boolean = false,
-    val isHidden: Boolean = false,
-    val sortOrder: Int = 0,
-    val updatedAt: LocalDateTime,
-) {
-    init {
-        require(name.isNotBlank()) { "Payment method name must not be blank" }
-    }
-}
-
 /**
  * A category or a payment method (CONTEXT.md): one concept, served by one catalog store keyed by
- * kind, so the screens that treat the two lists alike stop working in pairs.
+ * kind, and the row type both catalog tables carry in the sync journal.
  */
 data class CatalogItem(
-    val id: String,
+    val id: String = UUID.randomUUID().toString(),
     val name: String,
     val isPreset: Boolean = false,
     val isHidden: Boolean = false,
+    val sortOrder: Int = 0,
+    val updatedAt: LocalDateTime,
 ) {
     init {
         require(name.isNotBlank()) { "Catalog item name must not be blank" }

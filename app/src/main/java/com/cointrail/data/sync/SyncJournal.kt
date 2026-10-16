@@ -1,21 +1,21 @@
 package com.cointrail.data.sync
 
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import org.json.JSONObject
 
 /**
  * The full row state of every syncable table, tombstones included (SPEC §7). Sync exchanges the
  * whole journal and merges it record by record, so a device that was offline for days simply pushes
- * everything it has and loses nothing.
+ * everything it has and loses nothing. Both catalog tables carry [CatalogItem] rows under their
+ * own keys, so the journal and every backup file keep exactly the shape they always had.
  */
 data class SyncJournal(
     val expenses: List<Expense> = emptyList(),
-    val categories: List<Category> = emptyList(),
-    val paymentMethods: List<PaymentMethod> = emptyList(),
+    val categories: List<CatalogItem> = emptyList(),
+    val paymentMethods: List<CatalogItem> = emptyList(),
     val budgets: List<Budget> = emptyList(),
     val recurring: List<RecurringSeries> = emptyList(),
 ) {

@@ -2,12 +2,14 @@ package com.cointrail.data.sync
 
 import com.cointrail.core.Money
 import com.cointrail.data.db.CoinTrailDatabase
+import com.cointrail.data.repo.toCatalogItem
+import com.cointrail.data.repo.toCatalogItemEntity
+import com.cointrail.data.repo.toCategoryEntity
 import com.cointrail.data.repo.toDomain
 import com.cointrail.data.repo.toEntity
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import com.cointrail.domain.sync.SyncMerge
 import org.json.JSONArray
@@ -91,28 +93,30 @@ object JournalTables {
         isDeleted = { it.isDeleted },
     )
 
-    val categories: JournalTable<Category> = JournalTable(
+    // Both catalog tables carry CatalogItem rows under their own keys; their JSON row shape is the
+    // same six fields, encoded once below.
+    val categories: JournalTable<CatalogItem> = JournalTable(
         name = "categories",
         rowsIn = { it.categories },
         withRows = { journal, rows -> journal.copy(categories = rows) },
-        readRows = { database -> database.categoryDao().all().map { it.toDomain() } },
-        writeRows = { database, rows -> database.categoryDao().replaceAll(rows.map { it.toEntity() }) },
+        readRows = { database -> database.catalogDao().allCategories().map { it.toCatalogItem() } },
+        writeRows = { database, rows -> database.catalogDao().replaceAllCategories(rows.map { it.toCategoryEntity() }) },
         mergeKey = { it.id },
         updatedAt = { it.updatedAt },
-        encodeRow = ::encodeCategory,
-        decodeRow = ::decodeCategory,
+        encodeRow = ::encodeCatalogRow,
+        decodeRow = ::decodeCatalogRow,
     )
 
-    val paymentMethods: JournalTable<PaymentMethod> = JournalTable(
+    val paymentMethods: JournalTable<CatalogItem> = JournalTable(
         name = "paymentMethods",
         rowsIn = { it.paymentMethods },
         withRows = { journal, rows -> journal.copy(paymentMethods = rows) },
-        readRows = { database -> database.paymentMethodDao().all().map { it.toDomain() } },
-        writeRows = { database, rows -> database.paymentMethodDao().replaceAll(rows.map { it.toEntity() }) },
+        readRows = { database -> database.catalogDao().allPaymentMethods().map { it.toCatalogItem() } },
+        writeRows = { database, rows -> database.catalogDao().replaceAllPaymentMethods(rows.map { it.toCatalogItemEntity() }) },
         mergeKey = { it.id },
         updatedAt = { it.updatedAt },
-        encodeRow = ::encodePaymentMethod,
-        decodeRow = ::decodePaymentMethod,
+        encodeRow = ::encodeCatalogRow,
+        decodeRow = ::decodeCatalogRow,
     )
 
     val budgets: JournalTable<Budget> = JournalTable(
@@ -203,7 +207,9 @@ private fun decodeExpense(json: JSONObject): Expense = Expense(
     deletedAt = json.nullableString("deletedAt")?.let(LocalDateTime::parse),
 )
 
-private fun encodeCategory(row: Category): JSONObject = JSONObject()
+// One row shape for both catalog tables: the same fields the twin codecs wrote before, so existing
+// journals and backup files decode unchanged.
+private fun encodeCatalogRow(row: CatalogItem): JSONObject = JSONObject()
     .put("id", row.id)
     .put("name", row.name)
     .put("isPreset", row.isPreset)
@@ -211,24 +217,7 @@ private fun encodeCategory(row: Category): JSONObject = JSONObject()
     .put("sortOrder", row.sortOrder)
     .put("updatedAt", row.updatedAt.toString())
 
-private fun decodeCategory(json: JSONObject): Category = Category(
-    id = json.getString("id"),
-    name = json.getString("name"),
-    isPreset = json.getBoolean("isPreset"),
-    isHidden = json.getBoolean("isHidden"),
-    sortOrder = json.getInt("sortOrder"),
-    updatedAt = LocalDateTime.parse(json.getString("updatedAt")),
-)
-
-private fun encodePaymentMethod(row: PaymentMethod): JSONObject = JSONObject()
-    .put("id", row.id)
-    .put("name", row.name)
-    .put("isPreset", row.isPreset)
-    .put("isHidden", row.isHidden)
-    .put("sortOrder", row.sortOrder)
-    .put("updatedAt", row.updatedAt.toString())
-
-private fun decodePaymentMethod(json: JSONObject): PaymentMethod = PaymentMethod(
+private fun decodeCatalogRow(json: JSONObject): CatalogItem = CatalogItem(
     id = json.getString("id"),
     name = json.getString("name"),
     isPreset = json.getBoolean("isPreset"),

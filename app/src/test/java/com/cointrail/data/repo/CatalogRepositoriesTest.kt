@@ -2,7 +2,6 @@ package com.cointrail.data.repo
 
 import androidx.test.core.app.ApplicationProvider
 import com.cointrail.core.Money
-import com.cointrail.data.SeedData
 import com.cointrail.data.db.CoinTrailDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -29,8 +28,6 @@ import java.time.YearMonth
 class CatalogRepositoriesTest {
 
     private lateinit var db: CoinTrailDatabase
-    private lateinit var categories: CategoryRepository
-    private lateinit var paymentMethods: PaymentMethodRepository
     private lateinit var budgets: BudgetRepository
     private lateinit var recurring: RecurringSeriesRepository
     private val now: LocalDateTime = LocalDateTime.of(2026, 10, 5, 21, 30)
@@ -38,8 +35,6 @@ class CatalogRepositoriesTest {
     @Before
     fun setUp() {
         db = CoinTrailDatabase.createInMemory(ApplicationProvider.getApplicationContext())
-        categories = CategoryRepository(db.categoryDao()) { now }
-        paymentMethods = PaymentMethodRepository(db.paymentMethodDao()) { now }
         budgets = BudgetRepository(db.budgetDao()) { now }
         recurring = RecurringSeriesRepository(db.recurringSeriesDao()) { now }
     }
@@ -47,18 +42,6 @@ class CatalogRepositoriesTest {
     @After
     fun tearDown() {
         db.close()
-    }
-
-    @Test
-    fun `seeding keeps the fixed preset timestamp so synced edits win`() = runBlocking {
-        categories.ensureSeeded()
-        paymentMethods.ensureSeeded()
-
-        val food = categories.observeAll().first().first { it.id == "preset-food" }
-        val cash = paymentMethods.observeAll().first().first { it.id == "pm-cash" }
-
-        assertEquals(SeedData.categories.first { it.id == "preset-food" }.updatedAt, food.updatedAt)
-        assertEquals(SeedData.paymentMethods.first { it.id == "pm-cash" }.updatedAt, cash.updatedAt)
     }
 
     @Test

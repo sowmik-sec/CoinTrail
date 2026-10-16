@@ -29,8 +29,14 @@ data class CategoryEntity(
     val updatedAt: LocalDateTime,
 )
 
+/**
+ * The storage row of the payment_methods table — schema v2, unchanged since its presets were
+ * introduced. The catalog *concept* lives in [com.cointrail.domain.model.CatalogItem]; this class
+ * only names the second catalog table's row, which is why it is no longer paid for by a dedicated
+ * model, DAO or store.
+ */
 @Entity(tableName = "payment_methods", indices = [Index("updatedAt")])
-data class PaymentMethodEntity(
+data class CatalogItemEntity(
     @PrimaryKey val id: String,
     val name: String,
     val isPreset: Boolean,

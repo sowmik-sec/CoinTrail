@@ -60,67 +60,65 @@ interface ExpenseDao {
 }
 
 @Dao
-interface CategoryDao {
+interface CatalogDao {
+
+    /** The categories half: one table's queries; the payment-methods half below mirrors them. */
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(categories: List<CategoryEntity>)
+    suspend fun upsertAllCategories(categories: List<CategoryEntity>)
 
     @Query("SELECT * FROM categories")
-    suspend fun all(): List<CategoryEntity>
+    suspend fun allCategories(): List<CategoryEntity>
 
     @Query("DELETE FROM categories")
-    suspend fun deleteAll()
-
-    /** Atomically makes the table exactly [categories]; used to apply a merged sync journal. */
-    @Transaction
-    suspend fun replaceAll(categories: List<CategoryEntity>) {
-        deleteAll()
-        upsertAll(categories)
-    }
+    suspend fun deleteAllCategories()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(category: CategoryEntity)
+    suspend fun upsertCategory(category: CategoryEntity)
 
     @Query("SELECT * FROM categories ORDER BY sortOrder ASC, name ASC")
-    fun observeAll(): Flow<List<CategoryEntity>>
+    fun observeAllCategories(): Flow<List<CategoryEntity>>
 
     @Query("SELECT * FROM categories WHERE id = :id")
-    suspend fun byId(id: String): CategoryEntity?
+    suspend fun categoryById(id: String): CategoryEntity?
 
     @Query("SELECT COUNT(*) FROM categories")
-    suspend fun count(): Int
-}
+    suspend fun categoryCount(): Int
 
-@Dao
-interface PaymentMethodDao {
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(paymentMethods: List<PaymentMethodEntity>)
-
-    @Query("SELECT * FROM payment_methods")
-    suspend fun all(): List<PaymentMethodEntity>
-
-    @Query("DELETE FROM payment_methods")
-    suspend fun deleteAll()
-
-    /** Atomically makes the table exactly [paymentMethods]; used to apply a merged sync journal. */
     @Transaction
-    suspend fun replaceAll(paymentMethods: List<PaymentMethodEntity>) {
-        deleteAll()
-        upsertAll(paymentMethods)
+    suspend fun replaceAllCategories(categories: List<CategoryEntity>) {
+        deleteAllCategories()
+        upsertAllCategories(categories)
     }
 
+    /** The payment-methods half. */
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(paymentMethod: PaymentMethodEntity)
+    suspend fun upsertAllPaymentMethods(paymentMethods: List<CatalogItemEntity>)
+
+    @Query("SELECT * FROM payment_methods")
+    suspend fun allPaymentMethods(): List<CatalogItemEntity>
+
+    @Query("DELETE FROM payment_methods")
+    suspend fun deleteAllPaymentMethods()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPaymentMethod(paymentMethod: CatalogItemEntity)
 
     @Query("SELECT * FROM payment_methods ORDER BY sortOrder ASC, name ASC")
-    fun observeAll(): Flow<List<PaymentMethodEntity>>
+    fun observeAllPaymentMethods(): Flow<List<CatalogItemEntity>>
 
     @Query("SELECT * FROM payment_methods WHERE id = :id")
-    suspend fun byId(id: String): PaymentMethodEntity?
+    suspend fun paymentMethodById(id: String): CatalogItemEntity?
 
     @Query("SELECT COUNT(*) FROM payment_methods")
-    suspend fun count(): Int
+    suspend fun paymentMethodCount(): Int
+
+    @Transaction
+    suspend fun replaceAllPaymentMethods(paymentMethods: List<CatalogItemEntity>) {
+        deleteAllPaymentMethods()
+        upsertAllPaymentMethods(paymentMethods)
+    }
 }
 
 @Dao

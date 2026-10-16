@@ -2,9 +2,8 @@ package com.cointrail.data.sync
 
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -33,8 +32,8 @@ class JournalTablesTest {
                 ),
             ),
         ),
-        "categories" to SyncJournal(categories = listOf(Category(name = "Food", updatedAt = day))),
-        "paymentMethods" to SyncJournal(paymentMethods = listOf(PaymentMethod(name = "Cash", updatedAt = day))),
+        "categories" to SyncJournal(categories = listOf(CatalogItem(name = "Food", updatedAt = day))),
+        "paymentMethods" to SyncJournal(paymentMethods = listOf(CatalogItem(name = "Cash", updatedAt = day))),
         "budgets" to SyncJournal(
             budgets = listOf(
                 Budget(categoryId = null, month = YearMonth.of(2026, 10), monthlyLimit = Money(100), updatedAt = day),

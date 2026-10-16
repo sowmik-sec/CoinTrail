@@ -6,7 +6,7 @@ import com.cointrail.data.db.BudgetEntity
 import com.cointrail.data.db.CategoryEntity
 import com.cointrail.data.db.CoinTrailDatabase
 import com.cointrail.data.db.ExpenseEntity
-import com.cointrail.data.db.PaymentMethodEntity
+import com.cointrail.data.db.CatalogItemEntity
 import com.cointrail.data.db.RecurringSeriesEntity
 import com.cointrail.domain.model.Expense
 import kotlinx.coroutines.runBlocking
@@ -61,8 +61,8 @@ class RoomSyncLocalStoreTest {
     fun `merging an empty remote returns the local state including tombstones`() = runBlocking {
         db.expenseDao().upsert(expenseEntity("e1", 100, t1))
         db.expenseDao().upsert(expenseEntity("e2", 200, t1, deleted = t1))
-        db.categoryDao().upsert(CategoryEntity("preset-food", "Food", true, false, 0, t0))
-        db.paymentMethodDao().upsert(PaymentMethodEntity("pm-cash", "Cash", true, false, 0, t0))
+        db.catalogDao().upsertCategory(CategoryEntity("preset-food", "Food", true, false, 0, t0))
+        db.catalogDao().upsertPaymentMethod(CatalogItemEntity("pm-cash", "Cash", true, false, 0, t0))
         db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, null, 2_000_000, t0, null))
         db.budgetDao().upsert(BudgetEntity("b2", "preset-food", null, 500_000, t1, t1))
         db.recurringSeriesDao().upsert(
@@ -114,8 +114,8 @@ class RoomSyncLocalStoreTest {
     fun `state round-trips into another namespace unchanged`() = runBlocking {
         db.expenseDao().upsert(expenseEntity("e1", 100, t1))
         db.expenseDao().upsert(expenseEntity("e2", 200, t1, deleted = t1))
-        db.categoryDao().upsert(CategoryEntity("cat-1", "Pets", false, true, 9, t1))
-        db.paymentMethodDao().upsert(PaymentMethodEntity("pm-bkash", "bKash", true, false, 1, t0))
+        db.catalogDao().upsertCategory(CategoryEntity("cat-1", "Pets", false, true, 9, t1))
+        db.catalogDao().upsertPaymentMethod(CatalogItemEntity("pm-bkash", "bKash", true, false, 1, t0))
         db.budgetDao().upsert(BudgetEntity("b1", BudgetEntity.OVERALL, null, 2_000_000, t0, null))
         db.recurringSeriesDao().upsert(
             RecurringSeriesEntity("r1", 150_000, "preset-utilities", "internet", "pm-bkash", 5, "2026-10", "2026-10", false, t1, null)

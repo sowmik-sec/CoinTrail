@@ -6,6 +6,7 @@ import com.cointrail.domain.model.RecurringSeries
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeRecurringStore
 import com.cointrail.testing.MainDispatcherRule
+import com.cointrail.testing.TEST_TIME
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,9 +26,9 @@ class RecurringSettingsViewModelTest {
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 20, 12, 0)
     private val today: LocalDate = LocalDate.of(2026, 10, 20)
 
-    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
-    private val utilities = CatalogItem(id = "preset-utilities", name = "Utilities", isPreset = true)
-    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = TEST_TIME)
+    private val utilities = CatalogItem(id = "preset-utilities", name = "Utilities", isPreset = true, updatedAt = TEST_TIME)
+    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true, updatedAt = TEST_TIME)
 
     private val store = FakeRecurringStore()
     private val catalog = FakeCatalogStore(listOf(rent, utilities), listOf(bkash))

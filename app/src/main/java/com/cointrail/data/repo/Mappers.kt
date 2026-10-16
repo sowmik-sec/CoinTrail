@@ -2,14 +2,13 @@ package com.cointrail.data.repo
 
 import com.cointrail.core.Money
 import com.cointrail.data.db.BudgetEntity
+import com.cointrail.data.db.CatalogItemEntity
 import com.cointrail.data.db.CategoryEntity
 import com.cointrail.data.db.ExpenseEntity
-import com.cointrail.data.db.PaymentMethodEntity
 import com.cointrail.data.db.RecurringSeriesEntity
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import java.time.YearMonth
 
@@ -37,19 +36,21 @@ internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     deletedAt = deletedAt,
 )
 
-internal fun CategoryEntity.toDomain(): Category = Category(
+// The two catalog tables share one row concept; each table names its own storage row.
+
+internal fun CategoryEntity.toCatalogItem(): CatalogItem = CatalogItem(
     id = id, name = name, isPreset = isPreset, isHidden = isHidden, sortOrder = sortOrder, updatedAt = updatedAt,
 )
 
-internal fun Category.toEntity(): CategoryEntity = CategoryEntity(
+internal fun CatalogItem.toCategoryEntity(): CategoryEntity = CategoryEntity(
     id = id, name = name, isPreset = isPreset, isHidden = isHidden, sortOrder = sortOrder, updatedAt = updatedAt,
 )
 
-internal fun PaymentMethodEntity.toDomain(): PaymentMethod = PaymentMethod(
+internal fun CatalogItemEntity.toCatalogItem(): CatalogItem = CatalogItem(
     id = id, name = name, isPreset = isPreset, isHidden = isHidden, sortOrder = sortOrder, updatedAt = updatedAt,
 )
 
-internal fun PaymentMethod.toEntity(): PaymentMethodEntity = PaymentMethodEntity(
+internal fun CatalogItem.toCatalogItemEntity(): CatalogItemEntity = CatalogItemEntity(
     id = id, name = name, isPreset = isPreset, isHidden = isHidden, sortOrder = sortOrder, updatedAt = updatedAt,
 )
 

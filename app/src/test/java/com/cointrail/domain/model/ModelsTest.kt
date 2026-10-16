@@ -40,12 +40,9 @@ class ModelsTest {
     }
 
     @Test
-    fun `category and payment method reject blank names`() {
+    fun `a catalog item rejects a blank name`() {
         assertThrows(IllegalArgumentException::class.java) {
-            Category(id = "c", name = "", isPreset = false, isHidden = false, sortOrder = 0, updatedAt = ts)
-        }
-        assertThrows(IllegalArgumentException::class.java) {
-            PaymentMethod(id = "p", name = " ", isPreset = false, isHidden = false, sortOrder = 0, updatedAt = ts)
+            CatalogItem(id = "c", name = "", isPreset = false, isHidden = false, sortOrder = 0, updatedAt = ts)
         }
     }
 

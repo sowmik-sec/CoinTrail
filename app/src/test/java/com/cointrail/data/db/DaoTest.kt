@@ -139,12 +139,23 @@ class DaoTest {
 
     @Test
     fun `category rows round-trip and count works`() = runBlocking {
-        val dao = db.categoryDao()
-        dao.upsert(CategoryEntity("preset-food", "Food", true, false, 0, t0))
-        dao.upsert(CategoryEntity("c1", "Pets", false, true, 9, t0))
-        assertEquals(2, dao.count())
-        assertEquals(listOf("preset-food", "c1"), dao.observeAll().first().map { it.id })
-        assertEquals("Pets", dao.byId("c1")!!.name)
-        assertNull(dao.byId("missing"))
+        val dao = db.catalogDao()
+        dao.upsertCategory(CategoryEntity("preset-food", "Food", true, false, 0, t0))
+        dao.upsertCategory(CategoryEntity("c1", "Pets", false, true, 9, t0))
+        assertEquals(2, dao.categoryCount())
+        assertEquals(listOf("preset-food", "c1"), dao.observeAllCategories().first().map { it.id })
+        assertEquals("Pets", dao.categoryById("c1")!!.name)
+        assertNull(dao.categoryById("missing"))
+    }
+
+    @Test
+    fun `payment method rows round-trip and count works`() = runBlocking {
+        val dao = db.catalogDao()
+        dao.upsertPaymentMethod(CatalogItemEntity("pm-cash", "Cash", true, false, 0, t0))
+        dao.upsertPaymentMethod(CatalogItemEntity("pm-other", "Wallet", false, true, 4, t0))
+        assertEquals(2, dao.paymentMethodCount())
+        assertEquals(listOf("pm-cash", "pm-other"), dao.observeAllPaymentMethods().first().map { it.id })
+        assertEquals("Wallet", dao.paymentMethodById("pm-other")!!.name)
+        assertNull(dao.paymentMethodById("missing"))
     }
 }

@@ -44,11 +44,11 @@ class DatabaseFactoryTest {
         val other = CoinTrailDatabase.create(context, "alice@example.com")
         try {
             runBlocking {
-                local.categoryDao().upsert(CategoryEntity("c1", "Food", true, false, 0, ts))
+                local.catalogDao().upsertCategory(CategoryEntity("c1", "Food", true, false, 0, ts))
             }
             assertTrue(context.getDatabasePath(CoinTrailDatabase.databaseName("local")).exists())
-            assertEquals(1, runBlocking { local.categoryDao().count() })
-            assertEquals(0, runBlocking { other.categoryDao().count() })
+            assertEquals(1, runBlocking { local.catalogDao().categoryCount() })
+            assertEquals(0, runBlocking { other.catalogDao().categoryCount() })
         } finally {
             local.close()
             other.close()

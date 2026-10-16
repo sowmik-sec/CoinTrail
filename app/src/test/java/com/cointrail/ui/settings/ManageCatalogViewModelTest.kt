@@ -4,6 +4,7 @@ import com.cointrail.data.repo.CatalogKind
 import com.cointrail.domain.model.CatalogItem
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.MainDispatcherRule
+import com.cointrail.testing.TEST_TIME
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -18,10 +19,10 @@ class ManageCatalogViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
-    private val pets = CatalogItem(id = "custom-pets", name = "Pets", isPreset = false)
-    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
-    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true, updatedAt = TEST_TIME)
+    private val pets = CatalogItem(id = "custom-pets", name = "Pets", isPreset = false, updatedAt = TEST_TIME)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = TEST_TIME)
+    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true, updatedAt = TEST_TIME)
 
     private fun categoriesVm(store: FakeCatalogStore = FakeCatalogStore(listOf(food, pets))) =
         ManageCatalogViewModel(CatalogKind.CATEGORIES, store)

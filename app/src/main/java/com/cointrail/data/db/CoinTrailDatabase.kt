@@ -13,7 +13,7 @@ import java.security.MessageDigest
     entities = [
         ExpenseEntity::class,
         CategoryEntity::class,
-        PaymentMethodEntity::class,
+        CatalogItemEntity::class,
         BudgetEntity::class,
         RecurringSeriesEntity::class,
     ],
@@ -24,8 +24,7 @@ import java.security.MessageDigest
 abstract class CoinTrailDatabase : RoomDatabase() {
 
     abstract fun expenseDao(): ExpenseDao
-    abstract fun categoryDao(): CategoryDao
-    abstract fun paymentMethodDao(): PaymentMethodDao
+    abstract fun catalogDao(): CatalogDao
     abstract fun budgetDao(): BudgetDao
     abstract fun recurringSeriesDao(): RecurringSeriesDao
 

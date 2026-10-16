@@ -6,7 +6,6 @@ import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.RecurringStore
-import com.cointrail.data.repo.RepositoryBackedCatalogStore
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.CategoryTotal
@@ -62,24 +61,20 @@ class AccountScopedExpenseStore(private val manager: AccountManager) : ExpenseSt
 
 class AccountScopedCatalogStore(private val manager: AccountManager) : CatalogStore {
 
-    /** The namespace's twin repositories behind the one catalog store for this scope. */
-    private fun AccountData.backing(): CatalogStore =
-        RepositoryBackedCatalogStore(categories, paymentMethods)
-
     override fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>> =
-        manager.scoped { scope -> scope.backing().observeAll(kind) }
+        manager.scoped { scope -> scope.catalogs.observeAll(kind) }
 
     override suspend fun add(kind: CatalogKind, name: String): String =
-        manager.current.backing().add(kind, name)
+        manager.current.catalogs.add(kind, name)
 
     override suspend fun rename(kind: CatalogKind, id: String, name: String) =
-        manager.current.backing().rename(kind, id, name)
+        manager.current.catalogs.rename(kind, id, name)
 
     override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) =
-        manager.current.backing().setHidden(kind, id, hidden)
+        manager.current.catalogs.setHidden(kind, id, hidden)
 
     override suspend fun ensureSeeded(kind: CatalogKind) =
-        manager.current.backing().ensureSeeded(kind)
+        manager.current.catalogs.ensureSeeded(kind)
 }
 
 class AccountScopedBudgetStore(private val manager: AccountManager) : BudgetStore {
