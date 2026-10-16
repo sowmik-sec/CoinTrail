@@ -5,6 +5,7 @@ import com.cointrail.core.ExpenseCsv
 import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
+import com.cointrail.ui.components.namesById
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,8 +52,8 @@ class CsvExportViewModel(
         val from = current.from.atStartOfDay()
         val to = current.to.plusDays(1).atStartOfDay()
         val expensesInRange = expenses.loadBetween(from, to).sortedBy { it.occurredAt }
-        val categoryNames = catalog.observeAll(CatalogKind.CATEGORIES).first().associate { it.id to it.name }
-        val paymentMethodNames = catalog.observeAll(CatalogKind.PAYMENT_METHODS).first().associate { it.id to it.name }
+        val categoryNames = catalog.observeAll(CatalogKind.CATEGORIES).first().namesById()
+        val paymentMethodNames = catalog.observeAll(CatalogKind.PAYMENT_METHODS).first().namesById()
         return ExpenseCsv.render(expensesInRange, categoryNames, paymentMethodNames)
     }
 }

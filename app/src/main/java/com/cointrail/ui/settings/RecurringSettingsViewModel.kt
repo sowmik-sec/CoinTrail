@@ -9,6 +9,8 @@ import com.cointrail.data.repo.RecurringStore
 import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.RecurringSeries
 import com.cointrail.domain.model.visible
+import com.cointrail.ui.components.nameOf
+import com.cointrail.ui.components.namesById
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -52,8 +54,8 @@ class RecurringSettingsViewModel(
         catalog.observeAll(CatalogKind.CATEGORIES),
         catalog.observeAll(CatalogKind.PAYMENT_METHODS),
     ) { seriesList, categoryList, paymentMethodList ->
-        val categoryNames = categoryList.associate { it.id to it.name }
-        val paymentMethodNames = paymentMethodList.associate { it.id to it.name }
+        val categoryNames = categoryList.namesById()
+        val paymentMethodNames = paymentMethodList.namesById()
         RecurringSettingsUiState(
             series = seriesList.map { it.toRow(categoryNames, paymentMethodNames) },
             categories = categoryList.visible(),
@@ -120,9 +122,9 @@ class RecurringSettingsViewModel(
         id = id,
         amount = amount,
         categoryId = categoryId,
-        categoryName = categoryNames[categoryId] ?: categoryId,
+        categoryName = categoryNames.nameOf(categoryId),
         paymentMethodId = paymentMethodId,
-        paymentMethodName = paymentMethodId?.let { paymentMethodNames[it] },
+        paymentMethodName = paymentMethodId?.let(paymentMethodNames::get),
         note = note,
         dayOfMonth = dayOfMonth,
         isPaused = isPaused,

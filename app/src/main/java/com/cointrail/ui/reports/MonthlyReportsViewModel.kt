@@ -13,6 +13,8 @@ import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.DailyTotal
+import com.cointrail.ui.components.nameOf
+import com.cointrail.ui.components.namesById
 import com.cointrail.domain.reports.CategoryComparison
 import com.cointrail.domain.reports.MonthComparison
 import com.cointrail.domain.reports.MonthComparisonCalculator
@@ -105,7 +107,7 @@ class MonthlyReportsViewModel(
         categoryList: List<CatalogItem>,
         budgetList: List<Budget>,
     ): MonthlyReportsUiState {
-        val categoryNames = categoryList.associate { it.id to it.name }
+        val categoryNames = categoryList.namesById()
         val comparison = monthData.comparison
         return MonthlyReportsUiState(
             month = monthData.month,
@@ -117,7 +119,7 @@ class MonthlyReportsViewModel(
             comparisons = comparison.categories.map { row ->
                 CategoryComparisonRow(
                     categoryId = row.categoryId,
-                    name = categoryNames[row.categoryId] ?: row.categoryId,
+                    name = categoryNames.nameOf(row.categoryId),
                     current = row.current,
                     previous = row.previous,
                     delta = row.delta,
@@ -145,7 +147,7 @@ class MonthlyReportsViewModel(
         return spending.map { row ->
             CategoryBreakdownRow(
                 categoryId = row.categoryId,
-                name = categoryNames[row.categoryId] ?: row.categoryId,
+                name = categoryNames.nameOf(row.categoryId),
                 amount = row.current,
                 sharePercent = if (total.paisa > 0) {
                     ((row.current.paisa * 100 + total.paisa / 2) / total.paisa).toInt()

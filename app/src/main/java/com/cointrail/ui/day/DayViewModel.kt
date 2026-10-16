@@ -7,6 +7,8 @@ import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.ui.components.ExpenseRowUi
+import com.cointrail.ui.components.namesById
+import com.cointrail.ui.components.toRow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,19 +51,12 @@ class DayViewModel(
             catalog.observeAll(CatalogKind.CATEGORIES),
             catalog.observeAll(CatalogKind.PAYMENT_METHODS),
         ) { dayRows, dayTotal, categoryList, paymentMethodList ->
-            val categoryNames = categoryList.associate { it.id to it.name }
-            val paymentMethodNames = paymentMethodList.associate { it.id to it.name }
+            val categoryNames = categoryList.namesById()
+            val paymentMethodNames = paymentMethodList.namesById()
             DayUiState(
                 total = dayTotal,
                 rows = dayRows.map { expense ->
-                    ExpenseRowUi(
-                        id = expense.id,
-                        amount = expense.amount,
-                        categoryName = categoryNames[expense.categoryId] ?: expense.categoryId,
-                        paymentMethodName = expense.paymentMethodId?.let { paymentMethodNames[it] },
-                        note = expense.note,
-                        time = expense.occurredAt.format(timeFormat),
-                    )
+                    expense.toRow(categoryNames, paymentMethodNames, timeFormat)
                 },
             )
         }

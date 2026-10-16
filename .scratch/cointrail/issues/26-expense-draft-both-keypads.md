@@ -4,7 +4,7 @@
 
 **Blocked by:** 24 Catalogue — one store serves both lists
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One test suite covers the amount and selection rules for both screens
 - [ ] Quick-add and edit each keep only what differs between them, with the shared rules stated once

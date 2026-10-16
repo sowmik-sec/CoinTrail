@@ -18,6 +18,9 @@ import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
 import com.cointrail.domain.reports.MonthSummary
 import com.cointrail.ui.components.ExpenseRowUi
+import com.cointrail.ui.components.nameOf
+import com.cointrail.ui.components.namesById
+import com.cointrail.ui.components.toRow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -114,8 +117,8 @@ class HomeViewModel(
         budgetList: List<Budget>,
         timeFormat: DateTimeFormatter,
     ): HomeUiState {
-        val categoryNames = categoryList.associate { it.id to it.name }
-        val paymentMethodNames = paymentMethodList.associate { it.id to it.name }
+        val categoryNames = categoryList.namesById()
+        val paymentMethodNames = paymentMethodList.namesById()
         val summary = MonthSummary(currentTotal = snapshot.monthTotal, previousTotal = snapshot.previousTotal)
         return HomeUiState(
             month = YearMonth.from(date),
@@ -124,16 +127,9 @@ class HomeViewModel(
             momPercent = summary.percentChange,
             todayTotal = snapshot.dayTotal,
             todayCount = snapshot.dayRows.size,
-            recent = snapshot.dayRows.take(RECENT_LIMIT).map { expense ->
-                ExpenseRowUi(
-                    id = expense.id,
-                    amount = expense.amount,
-                    categoryName = categoryNames[expense.categoryId] ?: expense.categoryId,
-                    paymentMethodName = expense.paymentMethodId?.let { paymentMethodNames[it] },
-                    note = expense.note,
-                    time = expense.occurredAt.format(timeFormat),
-                )
-            },
+            recent = snapshot.dayRows
+                .take(RECENT_LIMIT)
+                .map { expense -> expense.toRow(categoryNames, paymentMethodNames, timeFormat) },
             budgets = BudgetProgressCalculator.forMonth(
                 budgets = EffectiveBudgets.forMonth(budgetList, YearMonth.from(date)),
                 categories = categoryList,
