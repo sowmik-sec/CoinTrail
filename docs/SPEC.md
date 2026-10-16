@@ -1,6 +1,6 @@
 # CoinTrail — Product & Technical Spec
 
-**Status:** FINAL — 2026-10-01; amended 2026-10-02 (Home & navigation, §6.11–6.12; per-month budgets, §5–§7, §11–§13).
+**Status:** FINAL — 2026-10-01; amended 2026-10-02 (Home & navigation, §6.11–6.12; per-month budgets, §5–§7, §11–§13); amended 2026-10-16 (architecture deepening, §12).
 **This file is the source of truth.** Any agent (or human) building or maintaining CoinTrail must read this before writing code. Implementation plans live in `docs/superpowers/plans/`, one per subsystem, and must not contradict this spec. If reality forces a change, update this file first.
 
 ---
@@ -157,6 +157,7 @@ No UI tests.
 7. **Release** — release signing, icon/branding, Play-Store-readiness checklist for sharing.
 8. **Home & navigation restructure** — Home landing screen, 3-tab Navigation-Compose host, Day screen unification. *(Plan 2026-10-02-home-and-navigation.md — written.)*
 9. **Per-month budgets** — default budgets + month overrides (incl. "no budget" months), effective-budget resolution, month picker in budget management, (scope, month) sync/backup keying.
+10. **Architecture deepening** — six modules deepened with no change to the schema, the journal or backup format, or any screen's behaviour: dead query paths removed; the account scope resolved by the stores themselves; one journal-table registry; one catalogue module for categories and payment methods; one expense draft behind both keypads; one month standing behind Home and the Monthly report. *(Spec ticket 20 and slices 21–28 in `.scratch/cointrail/issues/`.)*
 
 Each plan must produce working, testable software on its own and follow TDD with frequent commits.
 

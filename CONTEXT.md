@@ -7,6 +7,10 @@ Personal expense tracker: fast daily logging with data that survives a decade.
 **Expense**:
 A single money outflow at a point in time, with a category and optional note and payment method.
 
+**Expense draft**:
+An expense being entered or edited — its amount, category, payment method and note — before it is saved.
+_Avoid_: Form state, entry model
+
 **Home**:
 The landing screen: an at-a-glance summary of spending and budget health for the month.
 _Avoid_: Dashboard, Overview
@@ -22,6 +26,10 @@ _Avoid_: Add-expense form
 **Monthly report**:
 A calendar heatmap, per-category breakdown, and month-over-month comparison for one month.
 _Avoid_: Reports, Analytics
+
+**Month standing**:
+What one month's spending amounts to: its total, the previous month's total to compare against, the per-day and per-category figures, and how the month measures against its effective budget.
+_Avoid_: Month summary, month overview
 
 **Budget**:
 A spending limit for a scope — overall or a category. Each month is measured against its effective budget. Unused budget never rolls over.
@@ -45,3 +53,11 @@ _Avoid_: Subscription, Template
 **Catalog item**:
 A category or a payment method. Hidden when unwanted, never deleted.
 _Avoid_: Tag
+
+**Account scope**:
+The stored data belonging to one Google account, kept apart from every other account on the device; the no-account case is a scope of its own.
+_Avoid_: Profile, workspace, ledger
+
+**Journal table**:
+One of the record types the journal carries in full so two devices can reconcile: expenses, categories, payment methods, budgets, recurring series.
+_Avoid_: Entity, table
