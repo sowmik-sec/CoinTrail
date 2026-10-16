@@ -20,7 +20,8 @@ class DailyReminderWorker(
     override suspend fun doWork(): Result {
         val container = (applicationContext as CoinTrailApplication).container
         val today = LocalDate.now()
-        val loggedToday = container.expenses.countBetween(
+        // One-shot count, so the active scope is resolved when the job runs.
+        val loggedToday = container.accounts.current.expenses.countBetween(
             today.atStartOfDay(),
             today.plusDays(1).atStartOfDay(),
         )

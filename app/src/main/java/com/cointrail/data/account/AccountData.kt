@@ -12,16 +12,17 @@ import com.cointrail.data.sync.RoomSyncLocalStore
 import com.cointrail.data.sync.SyncLocalStore
 
 /**
- * The open database and repositories for a single account namespace. Everything user-facing is
- * reached through the [AccountManager]'s active scope, so switching accounts swaps this whole object
- * and two accounts on one device never share a database (SPEC §7).
+ * The open database and repositories for a single account namespace. Entirely user-facing data lives
+ * behind [AccountManager]'s account-scoped stores, so two accounts on one device never share a
+ * database (SPEC §7).
  */
 class AccountData(
     context: Context,
     val key: String,
+    databaseFactory: (String) -> CoinTrailDatabase = { CoinTrailDatabase.create(context, it) },
 ) {
 
-    private val database: CoinTrailDatabase = CoinTrailDatabase.create(context, key)
+    private val database: CoinTrailDatabase = databaseFactory(key)
 
     val expenses: ExpenseRepository = ExpenseRepository(database.expenseDao())
     val categories: CategoryRepository = CategoryRepository(database.categoryDao())

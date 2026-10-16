@@ -15,7 +15,6 @@ import androidx.lifecycle.lifecycleScope
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.CoinTrailApp
 import com.cointrail.ui.theme.CoinTrailTheme
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -45,9 +44,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { container.syncScheduler.enqueuePeriodic() }
         // Keeps the weekly Drive snapshot armed; a no-op until an account is signed in.
         lifecycleScope.launch { container.backupScheduler.enqueuePeriodic() }
-        // Sign-in/out/remove swaps the active database; restart with a fresh ViewModel store so no
-        // screen keeps a repository bound to the previous account (SPEC §7).
-        lifecycleScope.launch { container.accounts.accountKey.drop(1).collect { restartIntoAccount() } }
+        // An account change reaches the screens through the account-scoped stores themselves
+        // (ADR-0003); the activity never restarts for one.
         openQuickAdd.value = intent.wantsQuickAdd()
         setContent {
             CoinTrailTheme {
@@ -68,19 +66,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.wantsQuickAdd()) openQuickAdd.value = true
-    }
-
-    /**
-     * Relaunches with a cleared task so the account switch takes effect against a fresh ViewModel
-     * store; otherwise screens would keep repositories bound to the previous account's database.
-     */
-    private fun restartIntoAccount() {
-        startActivity(
-            Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-        )
-        finish()
     }
 
     /** The reminder is on by default, so Android 13+ users are asked for POST_NOTIFICATIONS once. */

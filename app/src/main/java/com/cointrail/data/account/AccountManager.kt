@@ -29,11 +29,14 @@ interface AccountSwitcher {
  * Owns the active account namespace: the persisted [AccountSession] plus the open [AccountData] for
  * whichever account is signed in ("local" when signed out). Sign-in, sign-out and "remove my data
  * from this device" swap or delete the scope, so each Google account keeps its own database
- * (SPEC §7). Signing out closes the scope but leaves its file on disk; removing it deletes the file.
+ * (SPEC §7). Signing out closes nothing and leaves the file on disk; removing a namespace deletes
+ * the file. The account-scoped stores watch [accountKey] and follow the active scope themselves
+ * (ADR-0003), so an account change is a flow emission, not an Activity restart.
  */
 class AccountManager(
     context: Context,
     private val session: AccountSession,
+    databaseFactory: (String) -> CoinTrailDatabase = { CoinTrailDatabase.create(context, it) },
 ) : AccountSwitcher {
 
     private val appContext: Context = context.applicationContext
@@ -48,19 +51,22 @@ class AccountManager(
     private var active: AccountData = openScope(AccountSession.namespaceKey(session.current.value))
 
     /**
-     * The namespace key of the currently open data. The UI watches this and restarts itself so every
-     * screen rebuilds against the new namespace instead of a stale repository.
+     * The namespace key of the currently open data. The account-scoped stores re-resolve their flows
+     * when it changes, so every screen follows the active account without anyone rebuilding it.
      */
     private val activeKey = MutableStateFlow(active.key)
 
-    /** The namespace key of the currently open data, so the UI can restart itself when it changes. */
+    /** The namespace key of the currently open data; the account-scoped stores' change trigger. */
     val accountKey: StateFlow<String> = activeKey.asStateFlow()
 
     /** The account currently signed in, or `null` in the no-account ("local") namespace. */
     override val account: StateFlow<Account?> = session.current
 
-    /** The open data scope for the active account. */
+    /** The open data scope for the active account; call-time callers resolve the scope through it. */
     val current: AccountData get() = active
+
+    /** The open data scope for [key], opening the namespace if this is its first use. */
+    fun scope(key: String): AccountData = openScope(key)
 
     /** Switches to [account]'s namespace. */
     override suspend fun signIn(account: Account) {

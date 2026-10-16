@@ -3,6 +3,11 @@ package com.cointrail.di
 import android.content.Context
 import com.cointrail.BuildConfig
 import com.cointrail.data.account.AccountManager
+import com.cointrail.data.account.AccountScopedBudgetStore
+import com.cointrail.data.account.AccountScopedCategoryStore
+import com.cointrail.data.account.AccountScopedExpenseStore
+import com.cointrail.data.account.AccountScopedPaymentMethodStore
+import com.cointrail.data.account.AccountScopedRecurringStore
 import com.cointrail.data.account.AccountSession
 import com.cointrail.data.account.CredentialManagerGoogleSignIn
 import com.cointrail.data.account.GoogleSignIn
@@ -23,11 +28,11 @@ import com.cointrail.data.reminder.ReminderScheduler
 import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.reminder.SharedPreferencesReminderSettings
 import com.cointrail.data.reminder.WorkManagerReminderScheduler
-import com.cointrail.data.repo.BudgetRepository
-import com.cointrail.data.repo.CategoryRepository
-import com.cointrail.data.repo.ExpenseRepository
-import com.cointrail.data.repo.PaymentMethodRepository
-import com.cointrail.data.repo.RecurringSeriesRepository
+import com.cointrail.data.repo.BudgetStore
+import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.ExpenseStore
+import com.cointrail.data.repo.PaymentMethodStore
+import com.cointrail.data.repo.RecurringStore
 import com.cointrail.data.sync.SharedPreferencesSyncSettings
 import com.cointrail.data.sync.SyncManager
 import com.cointrail.data.sync.SyncScheduler
@@ -37,9 +42,9 @@ import com.cointrail.data.sync.drive.GoogleDriveAccessTokens
 import com.cointrail.data.sync.drive.GoogleDriveSyncRemoteStore
 
 /**
- * Hand-rolled dependency graph for the single-module app. The user-facing repositories are read
- * through [accounts], so every screen and background job automatically follows whichever account is
- * signed in ("local" when signed out), per SPEC §7.
+ * Hand-rolled dependency graph for the single-module app. The user-facing stores are account-scoped
+ * (ADR-0003): each one resolves the active account itself, so every screen and background job
+ * automatically follows whichever account is signed in ("local" when signed out), per SPEC §7.
  */
 class AppContainer(context: Context) {
 
@@ -57,14 +62,19 @@ class AppContainer(context: Context) {
     fun googleSignIn(activityContext: Context): GoogleSignIn =
         CredentialManagerGoogleSignIn(activityContext, BuildConfig.GOOGLE_WEB_CLIENT_ID)
 
-    val expenses: ExpenseRepository get() = accounts.current.expenses
-    val categories: CategoryRepository get() = accounts.current.categories
-    val paymentMethods: PaymentMethodRepository get() = accounts.current.paymentMethods
-    val budgets: BudgetRepository get() = accounts.current.budgets
-    val recurring: RecurringSeriesRepository get() = accounts.current.recurring
+/**
+ * Account-scoped stores, created once: each one follows the active account itself (ADR-0003), so a
+ * caller that holds one across a sign-in/out keeps reading and writing the right scope without any
+ * screen rebuilding.
+ */
+val expenses: ExpenseStore = AccountScopedExpenseStore(accounts)
+val categories: CategoryStore = AccountScopedCategoryStore(accounts)
+val paymentMethods: PaymentMethodStore = AccountScopedPaymentMethodStore(accounts)
+val budgets: BudgetStore = AccountScopedBudgetStore(accounts)
+val recurring: RecurringStore = AccountScopedRecurringStore(accounts)
 
-    /** Creates the ordinary expenses for due recurring series, on app open and from the background job. */
-    val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recurringGenerator
+/** Creates the ordinary expenses for due recurring series, on app open and from the background job. */
+val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recurringGenerator
     val recurringScheduler: RecurringGenerationScheduler =
         WorkManagerRecurringGenerationScheduler(appContext)
 

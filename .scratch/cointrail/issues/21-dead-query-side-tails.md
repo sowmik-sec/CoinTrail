@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No production code reads expenses, categories, payment methods, budgets or recurring series by change time
 - [ ] The recurring-series store carries only the operations the settings screen and the generator use
