@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -167,9 +166,6 @@ class CatalogRepositoriesTest {
         val all = budgets.observeAll().first()
         assertEquals(1, all.size)
         assertEquals(Money(700_000), all.first().monthlyLimit)
-        val changes = budgets.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
-        assertEquals(1, changes.size)
-        assertNull(changes.first().deletedAt)
     }
 
     @Test
@@ -215,7 +211,7 @@ class CatalogRepositoriesTest {
     }
 
     @Test
-    fun `removeOverride tombstones the override so the default governs the month again`() = runBlocking {
+    fun `removeOverride returns the month to the default`() = runBlocking {
         val october = YearMonth.of(2026, 10)
         budgets.setDefault("preset-food", Money(500_000))
         budgets.setOverride("preset-food", october, Money(900_000))
@@ -225,9 +221,6 @@ class CatalogRepositoriesTest {
         val live = budgets.observeAll().first()
         assertEquals(1, live.size)
         assertNull(live.single().month)
-        val changes = budgets.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
-        val overrideChange = changes.first { it.month == october }
-        assertNotNull(overrideChange.deletedAt)
     }
 
     @Test
@@ -269,7 +262,7 @@ class CatalogRepositoriesTest {
     }
 
     @Test
-    fun `recurring series round-trips and delete tombstones it`() = runBlocking {
+    fun `recurring series round-trips and delete hides it`() = runBlocking {
         val id = recurring.add(
             amount = Money(150_000),
             categoryId = "preset-utilities",
@@ -297,8 +290,5 @@ class CatalogRepositoriesTest {
         recurring.delete(id)
 
         assertTrue(recurring.observeAll().first().isEmpty())
-        val changes = recurring.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
-        assertEquals(1, changes.size)
-        assertNotNull(changes.first().deletedAt)
     }
 }

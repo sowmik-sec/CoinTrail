@@ -76,14 +76,6 @@ class DaoTest {
     }
 
     @Test
-    fun `changesSince returns rows including tombstones`() = runBlocking {
-        db.expenseDao().upsert(expense("a", 100, at = LocalDateTime.of(2026, 10, 5, 13, 0)))
-        db.expenseDao().softDelete("a", t0.plusDays(1))
-        assertEquals(listOf("a"), db.expenseDao().changesSince(t0).map { it.id })
-        assertTrue(db.expenseDao().changesSince(LocalDateTime.of(2027, 1, 1, 0, 0)).isEmpty())
-    }
-
-    @Test
     fun `daily totals group by day and stay in range`() = runBlocking {
         db.expenseDao().upsert(expense("a", 100, at = LocalDateTime.of(2026, 10, 5, 9, 0)))
         db.expenseDao().upsert(expense("b", 250, at = LocalDateTime.of(2026, 10, 5, 20, 0)))
@@ -138,14 +130,11 @@ class DaoTest {
     }
 
     @Test
-    fun `budget softDelete hides row and tombstone stays in changesSince`() = runBlocking {
+    fun `budget softDelete hides the row from live queries`() = runBlocking {
         db.budgetDao().upsert(BudgetEntity("b1", "preset-food", null, 1000, t0, null))
         val now = LocalDateTime.of(2026, 10, 5, 22, 0)
         db.budgetDao().softDelete("b1", now)
         assertTrue(db.budgetDao().observeAll().first().isEmpty())
-        val changes = db.budgetDao().changesSince(t0)
-        assertEquals(1, changes.size)
-        assertEquals(now, changes.first().deletedAt)
     }
 
     @Test

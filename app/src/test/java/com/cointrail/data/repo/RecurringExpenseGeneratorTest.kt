@@ -140,13 +140,22 @@ class RecurringExpenseGeneratorTest {
 
     @Test
     fun `a deleted occurrence is not resurrected on a later run`() = runBlocking {
-        newSeries()
-        generator.generateDue(LocalDate.of(2026, 10, 15))
-        val expense = expensesOn(LocalDate.of(2026, 10, 15)).single()
-        db.expenseDao().softDelete(expense.id, now)
-
-        val row = series.observeAll().first().single()
-        series.upsert(row.copy(lastGeneratedMonth = null))
+        val seriesId = newSeries()
+        // A generation already ran and its occurrence was deleted (tombstoned); the row sits at the
+        // id generation derives for the month, so the re-run must not resurrect it.
+        db.expenseDao().upsert(
+            Expense(
+                id = RecurringExpenseGenerator.occurrenceId(seriesId, YearMonth.of(2026, 10)),
+                amount = Money(150_000),
+                categoryId = "preset-rent",
+                note = "rent",
+                paymentMethodId = "pm-bkash",
+                occurredAt = LocalDateTime.of(2026, 10, 15, 0, 0),
+                createdAt = now,
+                updatedAt = now,
+                deletedAt = now,
+            ).toEntity()
+        )
 
         assertEquals(0, generator.generateDue(LocalDate.of(2026, 10, 20)))
         assertTrue(expensesOn(LocalDate.of(2026, 10, 15)).isEmpty())

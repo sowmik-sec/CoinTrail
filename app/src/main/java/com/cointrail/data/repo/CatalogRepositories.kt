@@ -47,9 +47,6 @@ class CategoryRepository(
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
     }
-
-    suspend fun changesSince(since: LocalDateTime): List<Category> =
-        dao.changesSince(since).map { it.toDomain() }
 }
 
 class PaymentMethodRepository(
@@ -82,9 +79,6 @@ class PaymentMethodRepository(
         val existing = dao.byId(id) ?: return
         dao.upsert(existing.toDomain().copy(isHidden = hidden, updatedAt = now()).toEntity())
     }
-
-    suspend fun changesSince(since: LocalDateTime): List<PaymentMethod> =
-        dao.changesSince(since).map { it.toDomain() }
 }
 
 class BudgetRepository(
@@ -134,9 +128,6 @@ class BudgetRepository(
     }
 
     private fun scopeKey(categoryId: String?): String = categoryId ?: Budget.OVERALL_SCOPE
-
-    suspend fun changesSince(since: LocalDateTime): List<Budget> =
-        dao.changesSince(since).map { it.toDomain() }
 }
 
 class RecurringSeriesRepository(
@@ -197,12 +188,4 @@ class RecurringSeriesRepository(
     override suspend fun delete(id: String) {
         dao.softDelete(id, now())
     }
-
-    /** Full-row upsert, used by tests to write a series verbatim. */
-    suspend fun upsert(series: RecurringSeries) {
-        dao.upsert(series.copy(updatedAt = now()).toEntity())
-    }
-
-    suspend fun changesSince(since: LocalDateTime): List<RecurringSeries> =
-        dao.changesSince(since).map { it.toDomain() }
 }

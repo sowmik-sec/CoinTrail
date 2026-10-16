@@ -52,9 +52,6 @@ interface ExpenseDao {
     @Query("SELECT categoryId, SUM(amountPaisa) AS totalPaisa FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to GROUP BY categoryId ORDER BY totalPaisa DESC")
     fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotalRow>>
 
-    @Query("SELECT * FROM expenses WHERE updatedAt >= :since ORDER BY updatedAt ASC")
-    suspend fun changesSince(since: LocalDateTime): List<ExpenseEntity>
-
     @Query("UPDATE expenses SET deletedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun softDelete(id: String, now: LocalDateTime)
 
@@ -92,9 +89,6 @@ interface CategoryDao {
 
     @Query("SELECT COUNT(*) FROM categories")
     suspend fun count(): Int
-
-    @Query("SELECT * FROM categories WHERE updatedAt >= :since ORDER BY updatedAt ASC")
-    suspend fun changesSince(since: LocalDateTime): List<CategoryEntity>
 }
 
 @Dao
@@ -127,9 +121,6 @@ interface PaymentMethodDao {
 
     @Query("SELECT COUNT(*) FROM payment_methods")
     suspend fun count(): Int
-
-    @Query("SELECT * FROM payment_methods WHERE updatedAt >= :since ORDER BY updatedAt ASC")
-    suspend fun changesSince(since: LocalDateTime): List<PaymentMethodEntity>
 }
 
 @Dao
@@ -162,9 +153,6 @@ interface BudgetDao {
 
     @Query("UPDATE budgets SET deletedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun softDelete(id: String, now: LocalDateTime)
-
-    @Query("SELECT * FROM budgets WHERE updatedAt >= :since ORDER BY updatedAt ASC")
-    suspend fun changesSince(since: LocalDateTime): List<BudgetEntity>
 }
 
 @Dao
@@ -200,7 +188,4 @@ interface RecurringSeriesDao {
 
     @Query("UPDATE recurring_series SET deletedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun softDelete(id: String, now: LocalDateTime)
-
-    @Query("SELECT * FROM recurring_series WHERE updatedAt >= :since ORDER BY updatedAt ASC")
-    suspend fun changesSince(since: LocalDateTime): List<RecurringSeriesEntity>
 }

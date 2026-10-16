@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -67,15 +66,12 @@ class ExpenseRepositoryTest {
     }
 
     @Test
-    fun `soft delete hides row but keeps tombstone for sync`() = runBlocking {
+    fun `soft delete hides row from live queries`() = runBlocking {
         val id = repo.add(Money(100), "preset-food", null, null, LocalDateTime.of(2026, 10, 5, 13, 0))
 
         repo.delete(id)
 
         assertTrue(repo.observeBetween(dayStart, dayEnd).first().isEmpty())
-        val changes = repo.changesSince(LocalDateTime.of(2026, 1, 1, 0, 0))
-        assertEquals(1, changes.size)
-        assertNotNull(changes.first().deletedAt)
     }
 
     @Test

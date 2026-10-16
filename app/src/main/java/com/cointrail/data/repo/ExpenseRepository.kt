@@ -76,7 +76,4 @@ class ExpenseRepository(
     override fun observeCategoryTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<CategoryTotal>> =
         dao.observeCategoryTotals(from, to)
             .map { rows -> rows.map { CategoryTotal(it.categoryId, Money(it.totalPaisa)) } }
-
-    suspend fun changesSince(since: LocalDateTime): List<Expense> =
-        dao.changesSince(since).map { it.toDomain() }
 }
