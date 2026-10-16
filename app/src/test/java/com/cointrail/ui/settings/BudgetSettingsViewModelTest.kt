@@ -2,9 +2,9 @@ package com.cointrail.ui.settings
 
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.testing.FakeBudgetStore
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -26,9 +26,9 @@ class BudgetSettingsViewModelTest {
     private val october: YearMonth = YearMonth.of(2026, 10)
     private val november: YearMonth = YearMonth.of(2026, 11)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
-    private val rent = Category(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = noon)
-    private val shopping = Category(id = "preset-shopping", name = "Shopping", isPreset = true, isHidden = true, updatedAt = noon)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
+    private val shopping = CatalogItem(id = "preset-shopping", name = "Shopping", isPreset = true, isHidden = true)
 
     private fun budget(id: String, categoryId: String?, month: YearMonth?, paisa: Long?) = Budget(
         id = id,
@@ -40,9 +40,11 @@ class BudgetSettingsViewModelTest {
 
     private fun viewModel(
         budgets: FakeBudgetStore = FakeBudgetStore(),
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food, rent, shopping)),
         currentMonth: YearMonth = october,
-    ) = BudgetSettingsViewModel(budgets, categories) { currentMonth }
+    ) = BudgetSettingsViewModel(
+        budgets = budgets,
+        catalog = FakeCatalogStore(listOf(food, rent, shopping)),
+    ) { currentMonth }
 
     @Test
     fun `the overall row comes first and hidden categories are left out`() {

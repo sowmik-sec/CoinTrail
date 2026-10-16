@@ -43,7 +43,7 @@ import com.cointrail.ui.quickadd.QuickAddRoute
 import com.cointrail.ui.reports.MonthlyReportsRoute
 import com.cointrail.ui.settings.AccountSettingsRoute
 import com.cointrail.ui.settings.BudgetSettingsRoute
-import com.cointrail.ui.settings.CatalogKind
+import com.cointrail.data.repo.CatalogKind
 import com.cointrail.ui.settings.ManageCatalogRoute
 import com.cointrail.ui.settings.RecurringSettingsRoute
 import com.cointrail.ui.settings.ReminderSettingsRoute

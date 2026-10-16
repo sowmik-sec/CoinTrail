@@ -1,11 +1,9 @@
 package com.cointrail.ui.settings
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.RecurringSeries
-import com.cointrail.testing.FakeCategoryStore
-import com.cointrail.testing.FakePaymentMethodStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeRecurringStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,15 +25,14 @@ class RecurringSettingsViewModelTest {
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 20, 12, 0)
     private val today: LocalDate = LocalDate.of(2026, 10, 20)
 
-    private val rent = Category(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = noon)
-    private val utilities = Category(id = "preset-utilities", name = "Utilities", isPreset = true, updatedAt = noon)
-    private val bkash = PaymentMethod(id = "pm-bkash", name = "bKash", isPreset = true, updatedAt = noon)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
+    private val utilities = CatalogItem(id = "preset-utilities", name = "Utilities", isPreset = true)
+    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true)
 
     private val store = FakeRecurringStore()
-    private val categories = FakeCategoryStore(listOf(rent, utilities))
-    private val paymentMethods = FakePaymentMethodStore(listOf(bkash))
+    private val catalog = FakeCatalogStore(listOf(rent, utilities), listOf(bkash))
 
-    private fun viewModel() = RecurringSettingsViewModel(store, categories, paymentMethods) { today }
+    private fun viewModel() = RecurringSettingsViewModel(store, catalog) { today }
 
     private fun series(id: String, dayOfMonth: Int = 5, isPaused: Boolean = false) = RecurringSeries(
         id = id,

@@ -3,9 +3,9 @@ package com.cointrail.ui.day
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.ui.components.ExpenseRowUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,8 +31,7 @@ data class DayUiState(
 class DayViewModel(
     private val date: LocalDate,
     private val expenses: ExpenseStore,
-    categories: CategoryStore,
-    paymentMethods: PaymentMethodStore,
+    catalog: CatalogStore,
     timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm"),
 ) : ViewModel() {
 
@@ -47,8 +46,8 @@ class DayViewModel(
         combine(
             expenses.observeBetween(dayStart, dayEnd),
             expenses.observeTotalBetween(dayStart, dayEnd),
-            categories.observeAll(),
-            paymentMethods.observeAll(),
+            catalog.observeAll(CatalogKind.CATEGORIES),
+            catalog.observeAll(CatalogKind.PAYMENT_METHODS),
         ) { dayRows, dayTotal, categoryList, paymentMethodList ->
             val categoryNames = categoryList.associate { it.id to it.name }
             val paymentMethodNames = paymentMethodList.associate { it.id to it.name }

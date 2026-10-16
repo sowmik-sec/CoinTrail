@@ -1,12 +1,10 @@
 package com.cointrail.ui.export
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -26,8 +24,8 @@ class CsvExportViewModelTest {
 
     private val today: LocalDate = LocalDate.of(2026, 10, 15)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = LocalDateTime.of(2026, 10, 1, 0, 0))
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = LocalDateTime.of(2026, 10, 1, 0, 0))
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
 
     private fun expense(
         id: String,
@@ -49,9 +47,8 @@ class CsvExportViewModelTest {
 
     private fun viewModel(
         store: FakeExpenseStore,
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food)),
-        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
-    ) = CsvExportViewModel(store, categories, paymentMethods) { today }
+        catalog: FakeCatalogStore = FakeCatalogStore(listOf(food), listOf(cash)),
+    ) = CsvExportViewModel(store, catalog) { today }
 
     @Test
     fun `defaults to the whole current month`() {

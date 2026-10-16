@@ -36,7 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.cointrail.data.repo.CatalogKind
 import com.cointrail.di.AppContainer
+import com.cointrail.domain.model.CatalogItem
 
 @Composable
 fun ManageCatalogRoute(
@@ -65,11 +67,7 @@ fun ManageCatalogRoute(
 
 private fun manageCatalogViewModelFactory(container: AppContainer, kind: CatalogKind) = viewModelFactory {
     initializer {
-        ManageCatalogViewModel(
-            kind = kind,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
-        )
+        ManageCatalogViewModel(kind = kind, catalog = container.catalog)
     }
 }
 
@@ -85,7 +83,7 @@ fun ManageCatalogScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var renameTarget by remember { mutableStateOf<CatalogItemUi?>(null) }
+    var renameTarget by remember { mutableStateOf<CatalogItem?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -159,7 +157,7 @@ private fun AddRow(
 
 @Composable
 private fun CatalogItemRow(
-    item: CatalogItemUi,
+    item: CatalogItem,
     onRename: () -> Unit,
     onSetHidden: (Boolean) -> Unit,
 ) {

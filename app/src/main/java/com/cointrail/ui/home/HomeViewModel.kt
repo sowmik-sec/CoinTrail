@@ -5,21 +5,21 @@ import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
 import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.budget.BudgetProgressCalculator
 import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.reports.MonthSummary
 import com.cointrail.ui.components.ExpenseRowUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -55,8 +55,7 @@ data class HomeUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val expenses: ExpenseStore,
-    categories: CategoryStore,
-    paymentMethods: PaymentMethodStore,
+    catalog: CatalogStore,
     budgets: BudgetStore,
     budgetAlerts: BudgetAlertTracker,
     private val today: () -> LocalDate = { LocalDate.now() },
@@ -70,7 +69,7 @@ class HomeViewModel(
         val dayEnd = dayStart.plusDays(1)
         val monthStart = date.withDayOfMonth(1).atStartOfDay()
         val monthEnd = monthStart.plusMonths(1)
-        combine(
+        val snapshot: Flow<Snapshot> = combine(
             expenses.observeBetween(dayStart, dayEnd),
             expenses.observeTotalBetween(dayStart, dayEnd),
             expenses.observeTotalBetween(monthStart, monthEnd),
@@ -79,19 +78,20 @@ class HomeViewModel(
         ) { dayRows, dayTotal, monthTotal, previousTotal, allTotal ->
             Snapshot(dayRows, dayTotal, monthTotal, previousTotal, allTotal)
         }
-            .combine(expenses.observeCategoryTotals(monthStart, monthEnd)) { snapshot, categoryTotals ->
-                snapshot.copy(categoryTotals = categoryTotals)
+            .combine(expenses.observeCategoryTotals(monthStart, monthEnd)) { partial, categoryTotals ->
+                partial.copy(categoryTotals = categoryTotals)
             }
-            .combine(expenses.observeDailyTotals(YearMonth.from(date))) { snapshot, dailyTotals ->
-                snapshot.copy(dailyTotals = dailyTotals)
+            .combine(expenses.observeDailyTotals(YearMonth.from(date))) { partial, dailyTotals ->
+                partial.copy(dailyTotals = dailyTotals)
             }
-            .combine(categories.observeAll()) { snapshot, categoryList -> snapshot to categoryList }
-            .combine(paymentMethods.observeAll()) { (snapshot, categoryList), paymentMethodList ->
-                SnapshotWithCatalogs(snapshot, categoryList, paymentMethodList)
-            }
-            .combine(budgets.observeAll()) { (snapshot, categoryList, paymentMethodList), budgetList ->
-                buildState(date, snapshot, categoryList, paymentMethodList, budgetList, timeFormat)
-            }
+        combine(
+            snapshot,
+            catalog.observeAll(CatalogKind.CATEGORIES),
+            catalog.observeAll(CatalogKind.PAYMENT_METHODS),
+            budgets.observeAll(),
+        ) { partial, categoryList, paymentMethodList, budgetList ->
+            buildState(date, partial, categoryList, paymentMethodList, budgetList, timeFormat)
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
 
     init {
@@ -109,8 +109,8 @@ class HomeViewModel(
     private fun buildState(
         date: LocalDate,
         snapshot: Snapshot,
-        categoryList: List<Category>,
-        paymentMethodList: List<PaymentMethod>,
+        categoryList: List<CatalogItem>,
+        paymentMethodList: List<CatalogItem>,
         budgetList: List<Budget>,
         timeFormat: DateTimeFormatter,
     ): HomeUiState {
@@ -163,12 +163,6 @@ class HomeViewModel(
         val allTotal: Money,
         val categoryTotals: List<CategoryTotal> = emptyList(),
         val dailyTotals: List<DailyTotal> = emptyList(),
-    )
-
-    private data class SnapshotWithCatalogs(
-        val snapshot: Snapshot,
-        val categories: List<Category>,
-        val paymentMethods: List<PaymentMethod>,
     )
 
     private companion object {

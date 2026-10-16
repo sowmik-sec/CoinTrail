@@ -5,15 +5,13 @@ import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.domain.budget.BudgetAlertLevel
 import com.cointrail.domain.budget.BudgetStatus
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.testing.FakeBudgetAlertStore
 import com.cointrail.testing.FakeBudgetNotifier
 import com.cointrail.testing.FakeBudgetStore
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -40,9 +38,9 @@ class HomeViewModelTest {
     private val month: YearMonth = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
-    private val rent = Category(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = noon)
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = noon)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
 
     private fun expense(
         id: String,
@@ -76,12 +74,10 @@ class HomeViewModelTest {
         budgets: FakeBudgetStore = FakeBudgetStore(),
         alertStore: FakeBudgetAlertStore = FakeBudgetAlertStore(),
         notifier: FakeBudgetNotifier = FakeBudgetNotifier(),
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food, rent)),
-        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
+        catalog: FakeCatalogStore = FakeCatalogStore(listOf(food, rent), listOf(cash)),
     ) = HomeViewModel(
         expenses = store,
-        categories = categories,
-        paymentMethods = paymentMethods,
+        catalog = catalog,
         budgets = budgets,
         budgetAlerts = BudgetAlertTracker(alertStore, notifier) { month },
         today = { today },
@@ -202,8 +198,7 @@ class HomeViewModelTest {
 
         val row = HomeViewModel(
             expenses = store,
-            categories = FakeCategoryStore(listOf(food)),
-            paymentMethods = FakePaymentMethodStore(listOf(cash)),
+            catalog = FakeCatalogStore(listOf(food), listOf(cash)),
             budgets = FakeBudgetStore(),
             budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
             today = { today },
@@ -221,8 +216,7 @@ class HomeViewModelTest {
         val store = FakeExpenseStore()
         val vm = HomeViewModel(
             expenses = store,
-            categories = FakeCategoryStore(listOf(food)),
-            paymentMethods = FakePaymentMethodStore(listOf(cash)),
+            catalog = FakeCatalogStore(listOf(food), listOf(cash)),
             budgets = FakeBudgetStore(),
             budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
             today = { currentDay },

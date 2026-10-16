@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,6 +19,11 @@ import org.robolectric.annotation.Config
 import java.time.LocalDateTime
 import java.time.YearMonth
 
+/**
+ * The budget and recurring repositories behind their stores. The one catalog store over the two
+ * catalog repositories lives in CatalogStoreTest; this file keeps only what those tests do not
+ * assert — the budget tri-state rows and the recurring series lifecycle.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class CatalogRepositoriesTest {
@@ -53,83 +59,6 @@ class CatalogRepositoriesTest {
 
         assertEquals(SeedData.categories.first { it.id == "preset-food" }.updatedAt, food.updatedAt)
         assertEquals(SeedData.paymentMethods.first { it.id == "pm-cash" }.updatedAt, cash.updatedAt)
-    }
-
-    @Test
-    fun `ensureSeeded inserts category presets exactly once`() = runBlocking {
-        categories.ensureSeeded()
-        categories.ensureSeeded()
-
-        val all = categories.observeAll().first()
-
-        assertEquals(
-            listOf(
-                "preset-food" to "Food",
-                "preset-groceries" to "Groceries",
-                "preset-transport" to "Transport",
-                "preset-utilities" to "Utilities",
-                "preset-rent" to "Rent",
-                "preset-health" to "Health",
-                "preset-shopping" to "Shopping",
-                "preset-entertainment" to "Entertainment",
-                "preset-other" to "Other",
-            ),
-            all.map { it.id to it.name },
-        )
-        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6, 7, 8), all.map { it.sortOrder })
-        assertTrue(all.all { it.isPreset })
-    }
-
-    @Test
-    fun `ensureSeeded inserts payment method presets`() = runBlocking {
-        paymentMethods.ensureSeeded()
-
-        val all = paymentMethods.observeAll().first()
-
-        assertEquals(
-            listOf(
-                "pm-cash" to "Cash",
-                "pm-bkash" to "bKash",
-                "pm-nagad" to "Nagad",
-                "pm-card" to "Card",
-            ),
-            all.map { it.id to it.name },
-        )
-        assertTrue(all.all { it.isPreset })
-    }
-
-    @Test
-    fun `add rename and hide category`() = runBlocking {
-        val id = categories.add("Pets")
-
-        categories.rename(id, "Pet care")
-        categories.setHidden(id, true)
-
-        val pets = categories.observeAll().first().first { it.id == id }
-        assertEquals("Pet care", pets.name)
-        assertTrue(pets.isHidden)
-    }
-
-    @Test
-    fun `a custom category is appended after the presets`() = runBlocking {
-        categories.ensureSeeded()
-
-        categories.add("Pets")
-
-        val all = categories.observeAll().first()
-        assertEquals("Pets", all.last().name)
-        assertEquals(9, all.last().sortOrder)
-    }
-
-    @Test
-    fun `a custom payment method is appended after the presets`() = runBlocking {
-        paymentMethods.ensureSeeded()
-
-        paymentMethods.add("Wallet")
-
-        val all = paymentMethods.observeAll().first()
-        assertEquals("Wallet", all.last().name)
-        assertEquals(4, all.last().sortOrder)
     }
 
     @Test

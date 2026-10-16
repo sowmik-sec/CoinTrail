@@ -1,11 +1,9 @@
 package com.cointrail.ui.quickadd
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.domain.model.CatalogItem
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -25,23 +23,21 @@ class QuickAddViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var expenses: FakeExpenseStore
-    private lateinit var categories: FakeCategoryStore
-    private lateinit var paymentMethods: FakePaymentMethodStore
+    private lateinit var catalog: FakeCatalogStore
     private val now: LocalDateTime = LocalDateTime.of(2026, 10, 5, 21, 30)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = now)
-    private val transport = Category(id = "preset-transport", name = "Transport", isPreset = true, updatedAt = now)
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = now)
-    private val bkash = PaymentMethod(id = "pm-bkash", name = "bKash", isPreset = true, updatedAt = now)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val transport = CatalogItem(id = "preset-transport", name = "Transport", isPreset = true)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
+    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true)
 
     @Before
     fun setUp() {
         expenses = FakeExpenseStore()
-        categories = FakeCategoryStore(listOf(food, transport))
-        paymentMethods = FakePaymentMethodStore(listOf(cash, bkash))
+        catalog = FakeCatalogStore(listOf(food, transport), listOf(cash, bkash))
     }
 
-    private fun viewModel() = QuickAddViewModel(expenses, categories, paymentMethods) { now }
+    private fun viewModel() = QuickAddViewModel(expenses, catalog) { now }
 
     private fun QuickAddViewModel.enter(text: String) {
         text.forEach { char ->
@@ -59,8 +55,10 @@ class QuickAddViewModelTest {
 
     @Test
     fun `hidden categories and payment methods are not offered`() {
-        categories = FakeCategoryStore(listOf(food, transport.copy(isHidden = true)))
-        paymentMethods = FakePaymentMethodStore(listOf(cash, bkash.copy(isHidden = true)))
+        catalog = FakeCatalogStore(
+            listOf(food, transport.copy(isHidden = true)),
+            listOf(cash, bkash.copy(isHidden = true)),
+        )
 
         val vm = viewModel()
 

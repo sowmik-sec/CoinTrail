@@ -31,12 +31,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val container = (application as CoinTrailApplication).container
-        // Seed, generate due recurring expenses, then sync — sequentially, so the journal snapshot
-        // includes the generated occurrences instead of racing them.
+        // Seed, generate due recurring expenses, then sync — at start and again whenever the active
+        // account changes (SPEC §7), so a freshly switched namespace is usable without a restart.
+        // Sequentially, so the journal snapshot includes the generated occurrences instead of
+        // racing them.
         lifecycleScope.launch {
-            container.seedDefaults()
-            container.recurringGenerator.generateDue()
-            container.sync.syncNow()
+            container.accounts.accountKey.collect {
+                container.seedDefaults()
+                container.recurringGenerator.generateDue()
+                container.sync.syncNow()
+            }
         }
         lifecycleScope.launch { container.recurringScheduler.enqueuePeriodic() }
         // Keeps the daily reminder armed; also re-establishes the chain after a device restart.

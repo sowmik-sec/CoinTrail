@@ -97,8 +97,7 @@ private fun dayViewModelFactory(
         DayViewModel(
             date = date,
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
             timeFormat = timeFormat,
         )
     }

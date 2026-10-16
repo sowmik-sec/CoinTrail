@@ -89,8 +89,7 @@ private fun homeViewModelFactory(container: AppContainer, timeFormat: DateTimeFo
     initializer {
         HomeViewModel(
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
             budgets = container.budgets,
             budgetAlerts = container.budgetAlerts,
             timeFormat = timeFormat,

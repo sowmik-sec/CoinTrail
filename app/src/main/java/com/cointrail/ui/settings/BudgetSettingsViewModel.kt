@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
 import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.domain.budget.OVERALL_BUDGET_LABEL
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,7 +72,7 @@ data class BudgetSettingsUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class BudgetSettingsViewModel(
     private val budgets: BudgetStore,
-    categories: CategoryStore,
+    catalog: CatalogStore,
     private val currentMonth: () -> YearMonth = { YearMonth.now() },
 ) : ViewModel() {
 
@@ -79,7 +80,7 @@ class BudgetSettingsViewModel(
 
     val state: StateFlow<BudgetSettingsUiState> = selection
         .flatMapLatest { picked ->
-            combine(budgets.observeAll(), categories.observeAll()) { budgetList, categoryList ->
+            combine(budgets.observeAll(), catalog.observeAll(CatalogKind.CATEGORIES)) { budgetList, categoryList ->
                 BudgetSettingsUiState(selection = picked, rows = rows(budgetList, categoryList, picked))
             }
         }
@@ -136,7 +137,7 @@ class BudgetSettingsViewModel(
     private fun pickedMonth(): YearMonth? =
         (state.value.selection as? BudgetMonthSelection.Month)?.month
 
-    private fun rows(budgetList: List<Budget>, categoryList: List<Category>, picked: BudgetMonthSelection): List<BudgetLimitRow> =
+    private fun rows(budgetList: List<Budget>, categoryList: List<CatalogItem>, picked: BudgetMonthSelection): List<BudgetLimitRow> =
         buildList {
             add(budgetRow(categoryId = null, label = OVERALL_BUDGET_LABEL, budgetList = budgetList, picked = picked))
             categoryList.filterNot { it.isHidden }.forEach { category ->

@@ -4,9 +4,8 @@ import android.content.Context
 import com.cointrail.BuildConfig
 import com.cointrail.data.account.AccountManager
 import com.cointrail.data.account.AccountScopedBudgetStore
-import com.cointrail.data.account.AccountScopedCategoryStore
+import com.cointrail.data.account.AccountScopedCatalogStore
 import com.cointrail.data.account.AccountScopedExpenseStore
-import com.cointrail.data.account.AccountScopedPaymentMethodStore
 import com.cointrail.data.account.AccountScopedRecurringStore
 import com.cointrail.data.account.AccountSession
 import com.cointrail.data.account.CredentialManagerGoogleSignIn
@@ -29,9 +28,9 @@ import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.reminder.SharedPreferencesReminderSettings
 import com.cointrail.data.reminder.WorkManagerReminderScheduler
 import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.data.repo.RecurringStore
 import com.cointrail.data.sync.SharedPreferencesSyncSettings
 import com.cointrail.data.sync.SyncManager
@@ -65,11 +64,10 @@ class AppContainer(context: Context) {
 /**
  * Account-scoped stores, created once: each one follows the active account itself (ADR-0003), so a
  * caller that holds one across a sign-in/out keeps reading and writing the right scope without any
- * screen rebuilding.
+ * screen rebuilding. The two catalog lists are served by the one catalog store (ticket 24).
  */
 val expenses: ExpenseStore = AccountScopedExpenseStore(accounts)
-val categories: CategoryStore = AccountScopedCategoryStore(accounts)
-val paymentMethods: PaymentMethodStore = AccountScopedPaymentMethodStore(accounts)
+val catalog: CatalogStore = AccountScopedCatalogStore(accounts)
 val budgets: BudgetStore = AccountScopedBudgetStore(accounts)
 val recurring: RecurringStore = AccountScopedRecurringStore(accounts)
 
@@ -113,6 +111,7 @@ val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recur
 
     /** Seeds the active namespace's preset categories and payment methods exactly once. */
     suspend fun seedDefaults() {
-        accounts.current.seedDefaults()
+        catalog.ensureSeeded(CatalogKind.CATEGORIES)
+        catalog.ensureSeeded(CatalogKind.PAYMENT_METHODS)
     }
 }

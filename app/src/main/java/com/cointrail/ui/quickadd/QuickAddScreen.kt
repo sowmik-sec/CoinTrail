@@ -73,8 +73,7 @@ private fun quickAddViewModelFactory(container: AppContainer) = viewModelFactory
     initializer {
         QuickAddViewModel(
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
         )
     }
 }

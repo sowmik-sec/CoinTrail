@@ -1,12 +1,10 @@
 package com.cointrail.ui.edit
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -27,10 +25,10 @@ class EditExpenseViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
-    private val transport = Category(id = "preset-transport", name = "Transport", isPreset = true, updatedAt = noon)
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = noon)
-    private val bkash = PaymentMethod(id = "pm-bkash", name = "bKash", isPreset = true, updatedAt = noon)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val transport = CatalogItem(id = "preset-transport", name = "Transport", isPreset = true)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
+    private val bkash = CatalogItem(id = "pm-bkash", name = "bKash", isPreset = true)
 
     private fun expense(
         id: String = "lunch",
@@ -53,9 +51,8 @@ class EditExpenseViewModelTest {
     private fun viewModel(
         id: String = "lunch",
         store: FakeExpenseStore = FakeExpenseStore(),
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food, transport)),
-        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash, bkash)),
-    ) = EditExpenseViewModel(id, store, categories, paymentMethods)
+        catalog: FakeCatalogStore = FakeCatalogStore(listOf(food, transport), listOf(cash, bkash)),
+    ) = EditExpenseViewModel(id, store, catalog)
 
     private fun EditExpenseViewModel.enter(text: String) {
         text.forEach { char ->
@@ -99,8 +96,10 @@ class EditExpenseViewModelTest {
 
         val state = viewModel(
             store = store,
-            categories = FakeCategoryStore(listOf(food, transport.copy(isHidden = true))),
-            paymentMethods = FakePaymentMethodStore(listOf(cash, bkash.copy(isHidden = true))),
+            catalog = FakeCatalogStore(
+                listOf(food, transport.copy(isHidden = true)),
+                listOf(cash, bkash.copy(isHidden = true)),
+            ),
         ).state.value
 
         assertEquals(listOf(food), state.categories)

@@ -83,8 +83,7 @@ private fun monthlyReportsViewModelFactory(container: AppContainer) = viewModelF
     initializer {
         MonthlyReportsViewModel(
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
             budgets = container.budgets,
         )
     }

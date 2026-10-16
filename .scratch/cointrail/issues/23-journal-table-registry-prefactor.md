@@ -4,7 +4,7 @@
 
 **Blocked by:** 21 Delete the dead query-side tails — the deletions edit the same query and repository files, so the two cannot be worked side by side
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The merge, the JSON codec and the local store name no table individually
 - [ ] A test asserts that every table the journal carries has exactly one descriptor, so a table added to the journal cannot go unnoticed

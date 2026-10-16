@@ -84,7 +84,7 @@ private fun budgetSettingsViewModelFactory(container: AppContainer) = viewModelF
     initializer {
         BudgetSettingsViewModel(
             budgets = container.budgets,
-            categories = container.categories,
+            catalog = container.catalog,
         )
     }
 }

@@ -1,12 +1,10 @@
 package com.cointrail.ui.day
 
 import com.cointrail.core.Money
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -29,8 +27,8 @@ class DayViewModelTest {
     private val day: LocalDate = LocalDate.of(2026, 10, 5)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = noon)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val cash = CatalogItem(id = "pm-cash", name = "Cash", isPreset = true)
 
     private fun expense(
         id: String,
@@ -52,14 +50,12 @@ class DayViewModelTest {
 
     private fun viewModel(
         store: FakeExpenseStore,
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food)),
-        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
+        catalog: FakeCatalogStore = FakeCatalogStore(listOf(food), listOf(cash)),
         timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH),
     ) = DayViewModel(
         date = day,
         expenses = store,
-        categories = categories,
-        paymentMethods = paymentMethods,
+        catalog = catalog,
         timeFormat = timeFormat,
     )
 
@@ -144,8 +140,7 @@ class DayViewModelTest {
         )
         val vm = viewModel(
             store,
-            categories = FakeCategoryStore(listOf(food.copy(isHidden = true))),
-            paymentMethods = FakePaymentMethodStore(listOf(cash.copy(isHidden = true))),
+            catalog = FakeCatalogStore(listOf(food.copy(isHidden = true)), listOf(cash.copy(isHidden = true))),
         )
 
         val row = vm.state.value.rows.single()

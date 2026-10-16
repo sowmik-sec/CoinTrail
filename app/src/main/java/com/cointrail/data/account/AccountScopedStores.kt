@@ -2,16 +2,16 @@ package com.cointrail.data.account
 
 import com.cointrail.core.Money
 import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.data.repo.RecurringStore
+import com.cointrail.data.repo.RepositoryBackedCatalogStore
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 /**
- * Account-scoped views of the five user-facing stores (ADR-0003): each adapter implements the store
+ * Account-scoped views of the user-facing stores (ADR-0003): each adapter implements the store
  * interface the screens already depend on and resolves the active account scope itself, so a caller
  * holds one store for the life of the app and an account change arrives as a flow emission rather
  * than a restart. Flow reads re-resolve per subscription; suspend calls resolve the scope when they
@@ -60,30 +60,26 @@ class AccountScopedExpenseStore(private val manager: AccountManager) : ExpenseSt
         manager.scoped { it.expenses.observeDailyTotals(month) }
 }
 
-class AccountScopedCategoryStore(private val manager: AccountManager) : CategoryStore {
+class AccountScopedCatalogStore(private val manager: AccountManager) : CatalogStore {
 
-    override fun observeAll(): Flow<List<Category>> = manager.scoped { it.categories.observeAll() }
+    /** The namespace's twin repositories behind the one catalog store for this scope. */
+    private fun AccountData.backing(): CatalogStore =
+        RepositoryBackedCatalogStore(categories, paymentMethods)
 
-    override suspend fun add(name: String): String = manager.current.categories.add(name)
+    override fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>> =
+        manager.scoped { scope -> scope.backing().observeAll(kind) }
 
-    override suspend fun rename(id: String, name: String) = manager.current.categories.rename(id, name)
+    override suspend fun add(kind: CatalogKind, name: String): String =
+        manager.current.backing().add(kind, name)
 
-    override suspend fun setHidden(id: String, hidden: Boolean) =
-        manager.current.categories.setHidden(id, hidden)
-}
+    override suspend fun rename(kind: CatalogKind, id: String, name: String) =
+        manager.current.backing().rename(kind, id, name)
 
-class AccountScopedPaymentMethodStore(private val manager: AccountManager) : PaymentMethodStore {
+    override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) =
+        manager.current.backing().setHidden(kind, id, hidden)
 
-    override fun observeAll(): Flow<List<PaymentMethod>> =
-        manager.scoped { it.paymentMethods.observeAll() }
-
-    override suspend fun add(name: String): String = manager.current.paymentMethods.add(name)
-
-    override suspend fun rename(id: String, name: String) =
-        manager.current.paymentMethods.rename(id, name)
-
-    override suspend fun setHidden(id: String, hidden: Boolean) =
-        manager.current.paymentMethods.setHidden(id, hidden)
+    override suspend fun ensureSeeded(kind: CatalogKind) =
+        manager.current.backing().ensureSeeded(kind)
 }
 
 class AccountScopedBudgetStore(private val manager: AccountManager) : BudgetStore {

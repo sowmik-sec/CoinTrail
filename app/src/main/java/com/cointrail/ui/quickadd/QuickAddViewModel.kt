@@ -4,14 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
 import com.cointrail.core.MoneyInput
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.CatalogItem
+import com.cointrail.domain.model.visible
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -19,8 +20,8 @@ import java.time.LocalDateTime
 data class QuickAddUiState(
     val amountText: String = "",
     val amountDisplay: String = "৳0",
-    val categories: List<Category> = emptyList(),
-    val paymentMethods: List<PaymentMethod> = emptyList(),
+    val categories: List<CatalogItem> = emptyList(),
+    val paymentMethods: List<CatalogItem> = emptyList(),
     val selectedCategoryId: String? = null,
     val selectedPaymentMethodId: String? = null,
     val note: String = "",
@@ -31,8 +32,7 @@ data class QuickAddUiState(
 
 class QuickAddViewModel(
     private val expenses: ExpenseStore,
-    private val categories: CategoryStore,
-    private val paymentMethods: PaymentMethodStore,
+    private val catalog: CatalogStore,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
 ) : ViewModel() {
 
@@ -43,13 +43,13 @@ class QuickAddViewModel(
 
     init {
         viewModelScope.launch {
-            categories.observeAll().collect { list ->
-                _state.update { it.copy(categories = list.filter { category -> !category.isHidden }) }
+            catalog.observeAll(CatalogKind.CATEGORIES).map { it.visible() }.collect { categories ->
+                _state.update { it.copy(categories = categories) }
             }
         }
         viewModelScope.launch {
-            paymentMethods.observeAll().collect { list ->
-                _state.update { it.copy(paymentMethods = list.filter { method -> !method.isHidden }) }
+            catalog.observeAll(CatalogKind.PAYMENT_METHODS).map { it.visible() }.collect { paymentMethods ->
+                _state.update { it.copy(paymentMethods = paymentMethods) }
             }
         }
     }

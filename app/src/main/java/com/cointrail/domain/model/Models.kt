@@ -52,6 +52,24 @@ data class PaymentMethod(
 }
 
 /**
+ * A category or a payment method (CONTEXT.md): one concept, served by one catalog store keyed by
+ * kind, so the screens that treat the two lists alike stop working in pairs.
+ */
+data class CatalogItem(
+    val id: String,
+    val name: String,
+    val isPreset: Boolean = false,
+    val isHidden: Boolean = false,
+) {
+    init {
+        require(name.isNotBlank()) { "Catalog item name must not be blank" }
+    }
+}
+
+/** The rows a picker shows: a catalog list without its hidden entries. */
+fun List<CatalogItem>.visible(): List<CatalogItem> = filterNot { it.isHidden }
+
+/**
  * One budget row for a scope (overall or a category): either the scope's **default budget**
  * ([month] null, the standing monthly limit) or a **budget override** for one month (SPEC §6.5).
  * An override carries either an explicit positive limit or a null limit — the explicit

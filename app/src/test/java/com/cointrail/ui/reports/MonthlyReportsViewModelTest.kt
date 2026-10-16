@@ -3,13 +3,11 @@ package com.cointrail.ui.reports
 import com.cointrail.core.Money
 import com.cointrail.domain.budget.BudgetStatus
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.testing.FakeBudgetStore
-import com.cointrail.testing.FakeCategoryStore
+import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
-import com.cointrail.testing.FakePaymentMethodStore
 import com.cointrail.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
@@ -30,10 +28,9 @@ class MonthlyReportsViewModelTest {
     private val month: YearMonth = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 1, 12, 0)
 
-    private val food = Category(id = "preset-food", name = "Food", isPreset = true, updatedAt = noon)
-    private val rent = Category(id = "preset-rent", name = "Rent", isPreset = true, updatedAt = noon)
-    private val transport = Category(id = "preset-transport", name = "Transport", isPreset = true, updatedAt = noon)
-    private val cash = PaymentMethod(id = "pm-cash", name = "Cash", isPreset = true, updatedAt = noon)
+    private val food = CatalogItem(id = "preset-food", name = "Food", isPreset = true)
+    private val rent = CatalogItem(id = "preset-rent", name = "Rent", isPreset = true)
+    private val transport = CatalogItem(id = "preset-transport", name = "Transport", isPreset = true)
 
     private fun expense(
         id: String,
@@ -65,13 +62,11 @@ class MonthlyReportsViewModelTest {
     private fun viewModel(
         store: FakeExpenseStore,
         budgets: FakeBudgetStore = FakeBudgetStore(),
-        categories: FakeCategoryStore = FakeCategoryStore(listOf(food, rent, transport)),
-        paymentMethods: FakePaymentMethodStore = FakePaymentMethodStore(listOf(cash)),
+        categories: List<CatalogItem> = listOf(food, rent, transport),
         initialMonth: YearMonth = month,
     ) = MonthlyReportsViewModel(
         expenses = store,
-        categories = categories,
-        paymentMethods = paymentMethods,
+        catalog = FakeCatalogStore(categories),
         budgets = budgets,
         initialMonth = initialMonth,
     )

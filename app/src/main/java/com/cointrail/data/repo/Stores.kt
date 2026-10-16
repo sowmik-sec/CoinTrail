@@ -2,6 +2,7 @@ package com.cointrail.data.repo
 
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
@@ -11,6 +12,34 @@ import com.cointrail.domain.model.RecurringSeries
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.time.YearMonth
+
+/** The two catalog lists one store serves; the settings screens also navigate by it. */
+enum class CatalogKind(val title: String) {
+    CATEGORIES("Categories"),
+    PAYMENT_METHODS("Payment methods"),
+}
+
+/**
+ * Both catalog lists behind one store, keyed by [CatalogKind] (CONTEXT: catalog item). Observing,
+ * adding, renaming, hiding and seeding behave identically for either kind. Hidden items are not
+ * filtered here: the manage screens toggle them, and the pickers take only a list's
+ * [com.cointrail.domain.model.visible] rows.
+ */
+interface CatalogStore {
+
+    /** A live list of the kind's items in display order, hidden ones included. */
+    fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>>
+
+    suspend fun add(kind: CatalogKind, name: String): String
+
+    suspend fun rename(kind: CatalogKind, id: String, name: String)
+
+    /** Hides or shows the item; hidden ones disappear from pickers but keep their history. */
+    suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean)
+
+    /** Seeds the kind's presets exactly once for the active namespace. */
+    suspend fun ensureSeeded(kind: CatalogKind)
+}
 
 /**
  * Ports the UI layer talks to. They expose only the operations a screen needs, so screens can be

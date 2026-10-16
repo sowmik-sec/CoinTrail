@@ -2,9 +2,9 @@ package com.cointrail.ui.export
 
 import androidx.lifecycle.ViewModel
 import com.cointrail.core.ExpenseCsv
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,8 +29,7 @@ data class CsvExportUiState(
  */
 class CsvExportViewModel(
     private val expenses: ExpenseStore,
-    private val categories: CategoryStore,
-    private val paymentMethods: PaymentMethodStore,
+    private val catalog: CatalogStore,
     today: () -> LocalDate = { LocalDate.now() },
 ) : ViewModel() {
 
@@ -52,8 +51,8 @@ class CsvExportViewModel(
         val from = current.from.atStartOfDay()
         val to = current.to.plusDays(1).atStartOfDay()
         val expensesInRange = expenses.loadBetween(from, to).sortedBy { it.occurredAt }
-        val categoryNames = categories.observeAll().first().associate { it.id to it.name }
-        val paymentMethodNames = paymentMethods.observeAll().first().associate { it.id to it.name }
+        val categoryNames = catalog.observeAll(CatalogKind.CATEGORIES).first().associate { it.id to it.name }
+        val paymentMethodNames = catalog.observeAll(CatalogKind.PAYMENT_METHODS).first().associate { it.id to it.name }
         return ExpenseCsv.render(expensesInRange, categoryNames, paymentMethodNames)
     }
 }

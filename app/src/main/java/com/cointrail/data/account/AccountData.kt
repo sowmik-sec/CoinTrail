@@ -37,12 +37,6 @@ class AccountData(
     /** This namespace's full-row state, read and written by Drive sync (SPEC §7). */
     val syncStore: SyncLocalStore = RoomSyncLocalStore(database)
 
-    /** Seeds the preset categories and payment methods for this namespace exactly once. */
-    suspend fun seedDefaults() {
-        categories.ensureSeeded()
-        paymentMethods.ensureSeeded()
-    }
-
     /** Releases the underlying database; the file stays on disk unless the namespace is removed. */
     fun close() {
         database.close()

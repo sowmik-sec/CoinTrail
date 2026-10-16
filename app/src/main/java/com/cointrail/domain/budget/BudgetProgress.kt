@@ -2,7 +2,7 @@ package com.cointrail.domain.budget
 
 import com.cointrail.core.Money
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 
 /** The label shown for the overall (non-category) budget. */
 const val OVERALL_BUDGET_LABEL = "Overall"
@@ -91,7 +91,7 @@ object BudgetProgressCalculator {
      */
     fun forMonth(
         budgets: List<Budget>,
-        categories: List<Category>,
+        categories: List<CatalogItem>,
         overallSpent: Money,
         spentByCategory: Map<String, Money>,
         categoryNames: Map<String, String>,

@@ -87,8 +87,7 @@ private fun editExpenseViewModelFactory(container: AppContainer, expenseId: Stri
         EditExpenseViewModel(
             expenseId = expenseId,
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
         )
     }
 }

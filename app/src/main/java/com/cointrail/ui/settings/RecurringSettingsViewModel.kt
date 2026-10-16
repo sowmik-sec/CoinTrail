@@ -3,12 +3,12 @@ package com.cointrail.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
-import com.cointrail.data.repo.CategoryStore
-import com.cointrail.data.repo.PaymentMethodStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.RecurringStore
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.RecurringSeries
+import com.cointrail.domain.model.visible
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -32,8 +32,8 @@ data class RecurringSeriesRow(
 
 data class RecurringSettingsUiState(
     val series: List<RecurringSeriesRow> = emptyList(),
-    val categories: List<Category> = emptyList(),
-    val paymentMethods: List<PaymentMethod> = emptyList(),
+    val categories: List<CatalogItem> = emptyList(),
+    val paymentMethods: List<CatalogItem> = emptyList(),
 )
 
 /**
@@ -43,22 +43,21 @@ data class RecurringSettingsUiState(
  */
 class RecurringSettingsViewModel(
     private val recurring: RecurringStore,
-    private val categories: CategoryStore,
-    private val paymentMethods: PaymentMethodStore,
+    private val catalog: CatalogStore,
     private val today: () -> LocalDate = { LocalDate.now() },
 ) : ViewModel() {
 
     val state: StateFlow<RecurringSettingsUiState> = combine(
         recurring.observeAll(),
-        categories.observeAll(),
-        paymentMethods.observeAll(),
+        catalog.observeAll(CatalogKind.CATEGORIES),
+        catalog.observeAll(CatalogKind.PAYMENT_METHODS),
     ) { seriesList, categoryList, paymentMethodList ->
         val categoryNames = categoryList.associate { it.id to it.name }
         val paymentMethodNames = paymentMethodList.associate { it.id to it.name }
         RecurringSettingsUiState(
             series = seriesList.map { it.toRow(categoryNames, paymentMethodNames) },
-            categories = categoryList.filterNot { it.isHidden },
-            paymentMethods = paymentMethodList.filterNot { it.isHidden },
+            categories = categoryList.visible(),
+            paymentMethods = paymentMethodList.visible(),
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, RecurringSettingsUiState())
 

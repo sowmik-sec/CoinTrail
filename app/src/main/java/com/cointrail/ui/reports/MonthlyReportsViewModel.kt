@@ -4,16 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
 import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CategoryStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.data.repo.PaymentMethodStore
 import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.budget.BudgetProgressCalculator
 import com.cointrail.domain.budget.EffectiveBudgets
 import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.Category
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.DailyTotal
-import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.reports.CategoryComparison
 import com.cointrail.domain.reports.MonthComparison
 import com.cointrail.domain.reports.MonthComparisonCalculator
@@ -66,8 +65,7 @@ data class MonthlyReportsUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class MonthlyReportsViewModel(
     private val expenses: ExpenseStore,
-    private val categories: CategoryStore,
-    private val paymentMethods: PaymentMethodStore,
+    private val catalog: CatalogStore,
     private val budgets: BudgetStore,
     initialMonth: YearMonth = YearMonth.now(),
 ) : ViewModel() {
@@ -76,11 +74,10 @@ class MonthlyReportsViewModel(
 
     val state: StateFlow<MonthlyReportsUiState> = combine(
         monthData(),
-        categories.observeAll(),
-        paymentMethods.observeAll(),
+        catalog.observeAll(CatalogKind.CATEGORIES),
         budgets.observeAll(),
-    ) { monthData, categoryList, paymentMethodList, budgetList ->
-        buildState(monthData, categoryList, paymentMethodList, budgetList)
+    ) { monthData, categoryList, budgetList ->
+        buildState(monthData, categoryList, budgetList)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MonthlyReportsUiState(initialMonth))
 
     fun showPreviousMonth() = changeMonth(-1)
@@ -105,8 +102,7 @@ class MonthlyReportsViewModel(
 
     private fun buildState(
         monthData: MonthData,
-        categoryList: List<Category>,
-        paymentMethodList: List<PaymentMethod>,
+        categoryList: List<CatalogItem>,
         budgetList: List<Budget>,
     ): MonthlyReportsUiState {
         val categoryNames = categoryList.associate { it.id to it.name }

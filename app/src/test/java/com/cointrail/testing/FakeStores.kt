@@ -6,6 +6,8 @@ import com.cointrail.data.alerts.BudgetNotifier
 import com.cointrail.data.reminder.ReminderScheduler
 import com.cointrail.data.reminder.ReminderSettings
 import com.cointrail.data.repo.BudgetStore
+import com.cointrail.data.repo.CatalogKind
+import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.CategoryStore
 import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.data.repo.PaymentMethodStore
@@ -13,6 +15,7 @@ import com.cointrail.data.repo.RecurringStore
 import com.cointrail.domain.budget.BudgetAlert
 import com.cointrail.domain.budget.BudgetAlertKey
 import com.cointrail.domain.model.Budget
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
@@ -126,6 +129,55 @@ class FakeExpenseStore : ExpenseStore {
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
         all.value.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
             .sortedByDescending { it.occurredAt }
+}
+
+/**
+ * In-memory [CatalogStore] over both lists, one state flow per kind; records the calls the
+ * management screen makes so tests can assert on either kind identically.
+ */
+class FakeCatalogStore(
+    initialCategories: List<CatalogItem> = emptyList(),
+    initialPaymentMethods: List<CatalogItem> = emptyList(),
+) : CatalogStore {
+
+    private val lists = mutableMapOf(
+        CatalogKind.CATEGORIES to MutableStateFlow(initialCategories),
+        CatalogKind.PAYMENT_METHODS to MutableStateFlow(initialPaymentMethods),
+    )
+
+    val addedNames: MutableList<Pair<CatalogKind, String>> = mutableListOf()
+    val renames: MutableList<Triple<CatalogKind, String, String>> = mutableListOf()
+    val hiddenChanges: MutableList<Triple<CatalogKind, String, Boolean>> = mutableListOf()
+    val seeded: MutableList<CatalogKind> = mutableListOf()
+
+    fun seed(kind: CatalogKind, vararg items: CatalogItem) {
+        lists.getValue(kind).value = lists.getValue(kind).value + items
+    }
+
+    override fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>> = lists.getValue(kind)
+
+    override suspend fun add(kind: CatalogKind, name: String): String {
+        addedNames += kind to name
+        val id = UUID.randomUUID().toString()
+        lists.getValue(kind).value = lists.getValue(kind).value + CatalogItem(id = id, name = name)
+        return id
+    }
+
+    override suspend fun rename(kind: CatalogKind, id: String, name: String) {
+        renames += Triple(kind, id, name)
+        lists.getValue(kind).value =
+            lists.getValue(kind).value.map { if (it.id == id) it.copy(name = name) else it }
+    }
+
+    override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) {
+        hiddenChanges += Triple(kind, id, hidden)
+        lists.getValue(kind).value =
+            lists.getValue(kind).value.map { if (it.id == id) it.copy(isHidden = hidden) else it }
+    }
+
+    override suspend fun ensureSeeded(kind: CatalogKind) {
+        seeded += kind
+    }
 }
 
 class FakeCategoryStore(initial: List<Category> = emptyList()) : CategoryStore {

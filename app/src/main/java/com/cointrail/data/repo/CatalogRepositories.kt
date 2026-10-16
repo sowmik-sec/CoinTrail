@@ -7,6 +7,7 @@ import com.cointrail.data.db.CategoryDao
 import com.cointrail.data.db.PaymentMethodDao
 import com.cointrail.data.db.RecurringSeriesDao
 import com.cointrail.domain.model.Budget
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Category
 import com.cointrail.domain.model.PaymentMethod
 import com.cointrail.domain.model.RecurringSeries
@@ -15,6 +16,46 @@ import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.util.UUID
+
+/**
+ * One catalog store serving both lists (ticket 24): each kind reads and writes through its twin
+ * repository underneath, so the two tables, the two preset ID sets and the two journal keys are
+ * untouched. The screens see only this store and never the twins.
+ */
+class RepositoryBackedCatalogStore(
+    private val categories: CategoryRepository,
+    private val paymentMethods: PaymentMethodRepository,
+) : CatalogStore {
+
+    override fun observeAll(kind: CatalogKind): Flow<List<CatalogItem>> = when (kind) {
+        CatalogKind.CATEGORIES -> categories.observeAll().map { list -> list.map { it.toItem() } }
+        CatalogKind.PAYMENT_METHODS -> paymentMethods.observeAll().map { list -> list.map { it.toItem() } }
+    }
+
+    override suspend fun add(kind: CatalogKind, name: String): String = when (kind) {
+        CatalogKind.CATEGORIES -> categories.add(name)
+        CatalogKind.PAYMENT_METHODS -> paymentMethods.add(name)
+    }
+
+    override suspend fun rename(kind: CatalogKind, id: String, name: String) = when (kind) {
+        CatalogKind.CATEGORIES -> categories.rename(id, name)
+        CatalogKind.PAYMENT_METHODS -> paymentMethods.rename(id, name)
+    }
+
+    override suspend fun setHidden(kind: CatalogKind, id: String, hidden: Boolean) = when (kind) {
+        CatalogKind.CATEGORIES -> categories.setHidden(id, hidden)
+        CatalogKind.PAYMENT_METHODS -> paymentMethods.setHidden(id, hidden)
+    }
+
+    override suspend fun ensureSeeded(kind: CatalogKind) = when (kind) {
+        CatalogKind.CATEGORIES -> categories.ensureSeeded()
+        CatalogKind.PAYMENT_METHODS -> paymentMethods.ensureSeeded()
+    }
+
+    private fun Category.toItem() = CatalogItem(id = id, name = name, isPreset = isPreset, isHidden = isHidden)
+
+    private fun PaymentMethod.toItem() = CatalogItem(id = id, name = name, isPreset = isPreset, isHidden = isHidden)
+}
 
 class CategoryRepository(
     private val dao: CategoryDao,

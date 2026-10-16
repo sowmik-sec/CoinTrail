@@ -82,8 +82,7 @@ private fun csvExportViewModelFactory(container: AppContainer) = viewModelFactor
     initializer {
         CsvExportViewModel(
             expenses = container.expenses,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
         )
     }
 }

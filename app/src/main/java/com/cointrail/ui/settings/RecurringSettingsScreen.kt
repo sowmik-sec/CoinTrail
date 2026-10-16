@@ -46,8 +46,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.core.MoneyInput
 import com.cointrail.di.AppContainer
-import com.cointrail.domain.model.Category
-import com.cointrail.domain.model.PaymentMethod
+import com.cointrail.domain.model.CatalogItem
 import com.cointrail.ui.components.ChipOption
 import com.cointrail.ui.components.ChipRow
 import com.cointrail.ui.components.SectionLabel
@@ -78,8 +77,7 @@ private fun recurringSettingsViewModelFactory(container: AppContainer) = viewMod
     initializer {
         RecurringSettingsViewModel(
             recurring = container.recurring,
-            categories = container.categories,
-            paymentMethods = container.paymentMethods,
+            catalog = container.catalog,
         )
     }
 }
@@ -238,8 +236,8 @@ private fun SeriesRow(
 @Composable
 private fun RecurringEditorDialog(
     title: String,
-    categories: List<Category>,
-    paymentMethods: List<PaymentMethod>,
+    categories: List<CatalogItem>,
+    paymentMethods: List<CatalogItem>,
     initial: RecurringSeriesRow?,
     onDismiss: () -> Unit,
     onConfirm: (amount: String, categoryId: String, paymentMethodId: String?, note: String, dayOfMonth: Int) -> Unit,

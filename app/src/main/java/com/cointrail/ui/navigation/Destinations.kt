@@ -1,6 +1,6 @@
 package com.cointrail.ui.navigation
 
-import com.cointrail.ui.settings.CatalogKind
+import com.cointrail.data.repo.CatalogKind
 import java.time.LocalDate
 
 /**
