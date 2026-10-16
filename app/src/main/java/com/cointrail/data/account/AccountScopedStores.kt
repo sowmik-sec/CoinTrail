@@ -57,6 +57,8 @@ class AccountScopedExpenseStore(private val manager: AccountManager) : ExpenseSt
 
     override fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>> =
         manager.scoped { it.expenses.observeDailyTotals(month) }
+
+    override fun observeHasAny(): Flow<Boolean> = manager.scoped { it.expenses.observeHasAny() }
 }
 
 class AccountScopedCatalogStore(private val manager: AccountManager) : CatalogStore {

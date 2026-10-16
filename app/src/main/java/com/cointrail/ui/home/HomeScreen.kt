@@ -49,6 +49,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
+import com.cointrail.ui.month.MONTH_NAME_FORMAT
+import com.cointrail.ui.month.MonthStandingSource
 import com.cointrail.ui.components.AmountText
 import com.cointrail.ui.components.BudgetProgressSection
 import com.cointrail.ui.components.ExpenseRow
@@ -90,7 +92,7 @@ private fun homeViewModelFactory(container: AppContainer, timeFormat: DateTimeFo
         HomeViewModel(
             expenses = container.expenses,
             catalog = container.catalog,
-            budgets = container.budgets,
+            monthStanding = MonthStandingSource(container.expenses, container.catalog, container.budgets),
             budgetAlerts = container.budgetAlerts,
             timeFormat = timeFormat,
         )
@@ -155,7 +157,7 @@ private fun MonthHero(state: HomeUiState) {
             .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 28.dp + SHEET_OVERLAP),
     ) {
         Text(
-            text = state.month.format(MONTH_FORMAT),
+            text = state.month.format(MONTH_NAME_FORMAT),
             style = MaterialTheme.typography.titleMedium,
             color = forest.contentMuted,
         )
@@ -170,7 +172,7 @@ private fun MonthHero(state: HomeUiState) {
         if (momDelta != null && momPercent != null) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = describeMonthChange(momDelta, momPercent, state.month.minusMonths(1).format(MONTH_FORMAT)),
+                text = describeMonthChange(momDelta, momPercent, state.month.minusMonths(1).format(MONTH_NAME_FORMAT)),
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (momDelta.paisa > 0) forest.spendUp else forest.spendDown,
             )
@@ -314,5 +316,4 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 
 private val SHEET_OVERLAP = 24.dp
 private val SHEET_SHAPE = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-private val MONTH_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.ENGLISH)
 private val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM d", Locale.ENGLISH)

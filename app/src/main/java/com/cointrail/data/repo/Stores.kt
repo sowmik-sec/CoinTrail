@@ -73,6 +73,9 @@ interface ExpenseStore {
     /** A live per-day total for the live expenses of [month], for the monthly heatmap. */
     fun observeDailyTotals(month: YearMonth): Flow<List<DailyTotal>>
 
+    /** Whether any live expense exists at all; Home's first-run check reads this. */
+    fun observeHasAny(): Flow<Boolean>
+
     /** A one-shot snapshot of live expenses in `[from, to)`, for the CSV export. */
     suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense>
 }

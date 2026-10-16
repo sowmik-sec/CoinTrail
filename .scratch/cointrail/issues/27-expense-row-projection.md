@@ -4,7 +4,7 @@
 
 **Blocked by:** 24 Catalogue — one store serves both lists
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A display row is built in exactly one place
 - [ ] The screens that display an expense no longer derive catalog names themselves

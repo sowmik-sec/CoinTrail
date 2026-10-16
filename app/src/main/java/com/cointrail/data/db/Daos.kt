@@ -46,6 +46,10 @@ interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to")
     suspend fun countBetween(from: LocalDateTime, to: LocalDateTime): Int
 
+    /** Whether any live expense exists at all; the first-run check reads this, not a full sum. */
+    @Query("SELECT EXISTS(SELECT 1 FROM expenses WHERE deletedAt IS NULL)")
+    fun observeHasAny(): Flow<Boolean>
+
     @Query("SELECT substr(occurredAt, 1, 10) AS day, SUM(amountPaisa) AS totalPaisa FROM expenses WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to GROUP BY day ORDER BY day ASC")
     fun observeDailyTotals(from: LocalDateTime, to: LocalDateTime): Flow<List<DailyTotalRow>>
 

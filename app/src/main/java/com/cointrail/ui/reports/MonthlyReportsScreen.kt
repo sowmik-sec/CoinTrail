@@ -48,14 +48,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
+import com.cointrail.ui.month.MONTH_TITLE_FORMAT
+import com.cointrail.ui.month.MonthStandingSource
 import com.cointrail.domain.reports.MonthGrid
 import com.cointrail.ui.components.BudgetProgressSection
 import com.cointrail.ui.components.deltaColor
 import com.cointrail.ui.components.formatDelta
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun MonthlyReportsRoute(
@@ -82,9 +82,7 @@ fun MonthlyReportsRoute(
 private fun monthlyReportsViewModelFactory(container: AppContainer) = viewModelFactory {
     initializer {
         MonthlyReportsViewModel(
-            expenses = container.expenses,
-            catalog = container.catalog,
-            budgets = container.budgets,
+            monthStanding = MonthStandingSource(container.expenses, container.catalog, container.budgets),
         )
     }
 }
@@ -127,7 +125,7 @@ private fun MonthOverviewScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(state.month.format(MONTH_FORMAT)) },
+                title = { Text(state.month.format(MONTH_TITLE_FORMAT)) },
                 navigationIcon = {
                     if (onClose != null) {
                         IconButton(onClick = { onClose() }) {
@@ -172,7 +170,7 @@ private fun MonthOverviewScreen(
 private fun MonthTotal(month: YearMonth, total: Money) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text(
-            text = "Spent in ${month.format(MONTH_FORMAT)}",
+            text = "Spent in ${month.format(MONTH_TITLE_FORMAT)}",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -312,7 +310,7 @@ private fun CategoryBreakdownSection(rows: List<CategoryBreakdownRow>, total: Mo
 
 @Composable
 private fun MonthComparisonSection(state: MonthlyReportsUiState) {
-    val previousMonth = state.month.minusMonths(1).format(MONTH_FORMAT)
+    val previousMonth = state.month.minusMonths(1).format(MONTH_TITLE_FORMAT)
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -363,4 +361,3 @@ private fun MonthComparisonSection(state: MonthlyReportsUiState) {
 
 private val CELL_HEIGHT = 56.dp
 private const val DAYS_PER_WEEK = 7
-private val MONTH_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)

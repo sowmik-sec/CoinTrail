@@ -4,23 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
 import com.cointrail.data.alerts.BudgetAlertTracker
-import com.cointrail.data.repo.BudgetStore
 import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
-import com.cointrail.domain.budget.BudgetProgress
-import com.cointrail.domain.budget.BudgetProgressCalculator
-import com.cointrail.domain.budget.EffectiveBudgets
-import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
-import com.cointrail.domain.model.CategoryTotal
 import com.cointrail.domain.model.DailyTotal
-import com.cointrail.domain.model.Expense
-import com.cointrail.domain.reports.MonthSummary
-import com.cointrail.ui.components.ExpenseRowUi
-import com.cointrail.ui.components.nameOf
 import com.cointrail.ui.components.namesById
 import com.cointrail.ui.components.toRow
+import com.cointrail.ui.month.MonthStandingSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,13 +22,14 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 /**
  * Home state (SPEC §6.11): the month-to-date hero with its month-over-month move, the today block
- * (total, entry count and the last few entries), the budget bars and the first-run flag.
+ * (total, entry count and the last few entries), the budget bars and the first-run flag. The
+ * month's numbers — total, move, trail and budget bars — come from the one [MonthStandingSource],
+ * the same answer the Monthly report reads.
  */
 data class HomeUiState(
     val month: YearMonth = YearMonth.now(),
@@ -46,8 +38,8 @@ data class HomeUiState(
     val momPercent: Int? = null,
     val todayTotal: Money = Money.ZERO,
     val todayCount: Int = 0,
-    val recent: List<ExpenseRowUi> = emptyList(),
-    val budgets: List<BudgetProgress> = emptyList(),
+    val recent: List<com.cointrail.ui.components.ExpenseRowUi> = emptyList(),
+    val budgets: List<com.cointrail.domain.budget.BudgetProgress> = emptyList(),
     val hasAnyExpenses: Boolean = false,
     /** Spend for each day of the month from the 1st through today, quiet days as zero. */
     val monthTrail: List<Money> = emptyList(),
@@ -59,7 +51,7 @@ data class HomeUiState(
 class HomeViewModel(
     private val expenses: ExpenseStore,
     catalog: CatalogStore,
-    budgets: BudgetStore,
+    monthStanding: MonthStandingSource,
     budgetAlerts: BudgetAlertTracker,
     private val today: () -> LocalDate = { LocalDate.now() },
     timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm"),
@@ -70,30 +62,37 @@ class HomeViewModel(
     val state: StateFlow<HomeUiState> = day.flatMapLatest { date ->
         val dayStart = date.atStartOfDay()
         val dayEnd = dayStart.plusDays(1)
-        val monthStart = date.withDayOfMonth(1).atStartOfDay()
-        val monthEnd = monthStart.plusMonths(1)
-        val snapshot: Flow<Snapshot> = combine(
-            expenses.observeBetween(dayStart, dayEnd),
-            expenses.observeTotalBetween(dayStart, dayEnd),
-            expenses.observeTotalBetween(monthStart, monthEnd),
-            expenses.observeTotalBetween(monthStart.minusMonths(1), monthStart),
-            expenses.observeTotalBetween(ALL_TIME_START, ALL_TIME_END),
-        ) { dayRows, dayTotal, monthTotal, previousTotal, allTotal ->
-            Snapshot(dayRows, dayTotal, monthTotal, previousTotal, allTotal)
-        }
-            .combine(expenses.observeCategoryTotals(monthStart, monthEnd)) { partial, categoryTotals ->
-                partial.copy(categoryTotals = categoryTotals)
-            }
-            .combine(expenses.observeDailyTotals(YearMonth.from(date))) { partial, dailyTotals ->
-                partial.copy(dailyTotals = dailyTotals)
-            }
-        combine(
-            snapshot,
+        val todayBlock: Flow<Pair<List<com.cointrail.domain.model.Expense>, Money>> =
+            combine(
+                expenses.observeBetween(dayStart, dayEnd),
+                expenses.observeTotalBetween(dayStart, dayEnd),
+            ) { rows, total -> rows to total }
+        val names: Flow<Pair<Map<String, String>, Map<String, String>>> = combine(
             catalog.observeAll(CatalogKind.CATEGORIES),
             catalog.observeAll(CatalogKind.PAYMENT_METHODS),
-            budgets.observeAll(),
-        ) { partial, categoryList, paymentMethodList, budgetList ->
-            buildState(date, partial, categoryList, paymentMethodList, budgetList, timeFormat)
+        ) { categories, paymentMethods -> categories.namesById() to paymentMethods.namesById() }
+        combine(
+            monthStanding.observe(YearMonth.from(date)),
+            todayBlock,
+            names,
+            expenses.observeHasAny(),
+        ) { standing, (dayRows, dayTotal), (categoryNames, paymentMethodNames), hasAny ->
+            val summary = standing.summary
+            HomeUiState(
+                month = YearMonth.from(date),
+                monthTotal = standing.total,
+                momDelta = summary.delta,
+                momPercent = summary.percentChange,
+                todayTotal = dayTotal,
+                todayCount = dayRows.size,
+                recent = dayRows
+                    .take(RECENT_LIMIT)
+                    .map { expense -> expense.toRow(categoryNames, paymentMethodNames, timeFormat) },
+                budgets = standing.budgets,
+                hasAnyExpenses = hasAny,
+                monthTrail = monthTrail(date, standing.perDay),
+                daysInMonth = date.lengthOfMonth(),
+            )
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
 
@@ -109,40 +108,6 @@ class HomeViewModel(
         day.value = today()
     }
 
-    private fun buildState(
-        date: LocalDate,
-        snapshot: Snapshot,
-        categoryList: List<CatalogItem>,
-        paymentMethodList: List<CatalogItem>,
-        budgetList: List<Budget>,
-        timeFormat: DateTimeFormatter,
-    ): HomeUiState {
-        val categoryNames = categoryList.namesById()
-        val paymentMethodNames = paymentMethodList.namesById()
-        val summary = MonthSummary(currentTotal = snapshot.monthTotal, previousTotal = snapshot.previousTotal)
-        return HomeUiState(
-            month = YearMonth.from(date),
-            monthTotal = snapshot.monthTotal,
-            momDelta = summary.delta,
-            momPercent = summary.percentChange,
-            todayTotal = snapshot.dayTotal,
-            todayCount = snapshot.dayRows.size,
-            recent = snapshot.dayRows
-                .take(RECENT_LIMIT)
-                .map { expense -> expense.toRow(categoryNames, paymentMethodNames, timeFormat) },
-            budgets = BudgetProgressCalculator.forMonth(
-                budgets = EffectiveBudgets.forMonth(budgetList, YearMonth.from(date)),
-                categories = categoryList,
-                overallSpent = snapshot.monthTotal,
-                spentByCategory = snapshot.categoryTotals.associate { it.categoryId to it.total },
-                categoryNames = categoryNames,
-            ),
-            hasAnyExpenses = snapshot.allTotal > Money.ZERO,
-            monthTrail = monthTrail(date, snapshot.dailyTotals),
-            daysInMonth = date.lengthOfMonth(),
-        )
-    }
-
     /** One total per day from the 1st through [date]; days without spending read zero. */
     private fun monthTrail(date: LocalDate, dailyTotals: List<DailyTotal>): List<Money> {
         val totalByDay = dailyTotals.associate { it.day to it.total }
@@ -151,21 +116,7 @@ class HomeViewModel(
         }
     }
 
-    private data class Snapshot(
-        val dayRows: List<Expense>,
-        val dayTotal: Money,
-        val monthTotal: Money,
-        val previousTotal: Money,
-        val allTotal: Money,
-        val categoryTotals: List<CategoryTotal> = emptyList(),
-        val dailyTotals: List<DailyTotal> = emptyList(),
-    )
-
     private companion object {
         const val RECENT_LIMIT = 5
-
-        // A window wide enough to hold any plausible expense date, for the first-run check.
-        val ALL_TIME_START: LocalDateTime = LocalDateTime.of(1900, 1, 1, 0, 0)
-        val ALL_TIME_END: LocalDateTime = LocalDateTime.of(2100, 1, 1, 0, 0)
     }
 }

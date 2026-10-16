@@ -3,28 +3,18 @@ package com.cointrail.ui.reports
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointrail.core.Money
-import com.cointrail.data.repo.BudgetStore
-import com.cointrail.data.repo.CatalogKind
-import com.cointrail.data.repo.CatalogStore
-import com.cointrail.data.repo.ExpenseStore
 import com.cointrail.domain.budget.BudgetProgress
-import com.cointrail.domain.budget.BudgetProgressCalculator
-import com.cointrail.domain.budget.EffectiveBudgets
-import com.cointrail.domain.model.Budget
-import com.cointrail.domain.model.CatalogItem
-import com.cointrail.domain.model.DailyTotal
-import com.cointrail.ui.components.nameOf
-import com.cointrail.ui.components.namesById
-import com.cointrail.domain.reports.CategoryComparison
-import com.cointrail.domain.reports.MonthComparison
-import com.cointrail.domain.reports.MonthComparisonCalculator
+import com.cointrail.ui.month.CategoryStanding
+import com.cointrail.ui.month.MonthStanding
+import com.cointrail.ui.month.MonthStandingSource
+import com.cointrail.ui.month.nextMonth
+import com.cointrail.ui.month.previousMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.YearMonth
@@ -60,94 +50,64 @@ data class MonthlyReportsUiState(
 
 /**
  * Backs the monthly reports screen (SPEC §6.4): the calendar heatmap, the month total and
- * per-category breakdown, the month-over-month comparison and the budget bars. The viewed month is
- * held here so it survives a trip into the edit screen and back. Tapping a day navigates to the
- * shared Day screen (SPEC §6.1) — the navigation lives in the route, not here.
+ * per-category breakdown, the month-over-month comparison and the budget bars — all read from the
+ * one [MonthStandingSource] Home reads, so the two screens can no longer disagree about the same
+ * month, and this screen does not resolve effective budgets or compare months itself. The viewed
+ * month is held here so it survives a trip into the edit screen and back. Tapping a day navigates
+ * to the shared Day screen (SPEC §6.1) — the navigation lives in the route, not here.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MonthlyReportsViewModel(
-    private val expenses: ExpenseStore,
-    private val catalog: CatalogStore,
-    private val budgets: BudgetStore,
+    private val monthStanding: MonthStandingSource,
     initialMonth: YearMonth = YearMonth.now(),
 ) : ViewModel() {
 
     private val month = MutableStateFlow(initialMonth)
 
-    val state: StateFlow<MonthlyReportsUiState> = combine(
-        monthData(),
-        catalog.observeAll(CatalogKind.CATEGORIES),
-        budgets.observeAll(),
-    ) { monthData, categoryList, budgetList ->
-        buildState(monthData, categoryList, budgetList)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, MonthlyReportsUiState(initialMonth))
-
-    fun showPreviousMonth() = changeMonth(-1)
-
-    fun showNextMonth() = changeMonth(1)
-
-    private fun changeMonth(delta: Long) {
-        month.value = month.value.plusMonths(delta)
-    }
-
-    private fun monthData(): Flow<MonthData> = month.flatMapLatest { current ->
-        val monthStart = current.atDay(1).atStartOfDay()
-        val monthEnd = monthStart.plusMonths(1)
-        combine(
-            expenses.observeDailyTotals(current),
-            expenses.observeCategoryTotals(monthStart, monthEnd),
-            expenses.observeCategoryTotals(monthStart.minusMonths(1), monthStart),
-        ) { dailyTotals, currentTotals, previousTotals ->
-            MonthData(current, dailyTotals, MonthComparisonCalculator.compare(currentTotals, previousTotals))
+    val state: StateFlow<MonthlyReportsUiState> = month
+        .flatMapLatest { viewed ->
+            monthStanding.observe(viewed).map { standing -> buildState(viewed, standing) }
         }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, MonthlyReportsUiState(initialMonth))
+
+    fun showPreviousMonth() {
+        month.value = month.value.previousMonth()
     }
 
-    private fun buildState(
-        monthData: MonthData,
-        categoryList: List<CatalogItem>,
-        budgetList: List<Budget>,
-    ): MonthlyReportsUiState {
-        val categoryNames = categoryList.namesById()
-        val comparison = monthData.comparison
+    fun showNextMonth() {
+        month.value = month.value.nextMonth()
+    }
+
+    private fun buildState(month: YearMonth, standing: MonthStanding): MonthlyReportsUiState {
         return MonthlyReportsUiState(
-            month = monthData.month,
-            dailyTotals = monthData.dailyTotals.associate { it.day to it.total },
-            total = comparison.currentTotal,
-            previousTotal = comparison.previousTotal,
-            delta = comparison.delta,
-            breakdown = breakdown(comparison.categories, comparison.currentTotal, categoryNames),
-            comparisons = comparison.categories.map { row ->
+            month = month,
+            dailyTotals = standing.perDay.associate { it.day to it.total },
+            total = standing.total,
+            previousTotal = standing.previousTotal,
+            delta = standing.delta,
+            breakdown = breakdown(standing.categories, standing.total),
+            comparisons = standing.categories.map { row ->
                 CategoryComparisonRow(
                     categoryId = row.categoryId,
-                    name = categoryNames.nameOf(row.categoryId),
+                    name = row.name,
                     current = row.current,
                     previous = row.previous,
                     delta = row.delta,
                 )
             },
-            budgets = BudgetProgressCalculator.forMonth(
-                budgets = EffectiveBudgets.forMonth(budgetList, monthData.month),
-                categories = categoryList,
-                overallSpent = comparison.currentTotal,
-                spentByCategory = comparison.categories.associate { it.categoryId to it.current },
-                categoryNames = categoryNames,
-            ),
+            budgets = standing.budgets,
         )
     }
 
-    private fun breakdown(
-        comparisons: List<CategoryComparison>,
-        total: Money,
-        categoryNames: Map<String, String>,
-    ): List<CategoryBreakdownRow> {
-        val spending = comparisons
+    private fun breakdown(categories: List<CategoryStanding>, total: Money): List<CategoryBreakdownRow> {
+        val spending = categories
             .filter { it.current > Money.ZERO }
-            .sortedWith(compareByDescending<CategoryComparison> { it.current.paisa }.thenBy { it.categoryId })
+            .sortedWith(compareByDescending<CategoryStanding> { it.current.paisa }.thenBy { it.categoryId })
         val biggest = spending.maxOfOrNull { it.current.paisa } ?: 0L
         return spending.map { row ->
             CategoryBreakdownRow(
                 categoryId = row.categoryId,
-                name = categoryNames.nameOf(row.categoryId),
+                name = row.name,
                 amount = row.current,
                 sharePercent = if (total.paisa > 0) {
                     ((row.current.paisa * 100 + total.paisa / 2) / total.paisa).toInt()
@@ -158,10 +118,4 @@ class MonthlyReportsViewModel(
             )
         }
     }
-
-    private data class MonthData(
-        val month: YearMonth,
-        val dailyTotals: List<DailyTotal>,
-        val comparison: MonthComparison,
-    )
 }

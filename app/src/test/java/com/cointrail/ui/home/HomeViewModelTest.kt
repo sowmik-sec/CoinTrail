@@ -14,6 +14,7 @@ import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
 import com.cointrail.testing.MainDispatcherRule
 import com.cointrail.testing.TEST_TIME
+import com.cointrail.ui.month.MonthStandingSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -79,7 +80,7 @@ class HomeViewModelTest {
     ) = HomeViewModel(
         expenses = store,
         catalog = catalog,
-        budgets = budgets,
+        monthStanding = MonthStandingSource(store, catalog, budgets),
         budgetAlerts = BudgetAlertTracker(alertStore, notifier) { month },
         today = { today },
     )
@@ -200,7 +201,7 @@ class HomeViewModelTest {
         val row = HomeViewModel(
             expenses = store,
             catalog = FakeCatalogStore(listOf(food), listOf(cash)),
-            budgets = FakeBudgetStore(),
+            monthStanding = MonthStandingSource(store, FakeCatalogStore(listOf(food), listOf(cash)), FakeBudgetStore()),
             budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
             today = { today },
             timeFormat = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH),
@@ -218,7 +219,7 @@ class HomeViewModelTest {
         val vm = HomeViewModel(
             expenses = store,
             catalog = FakeCatalogStore(listOf(food), listOf(cash)),
-            budgets = FakeBudgetStore(),
+            monthStanding = MonthStandingSource(store, FakeCatalogStore(listOf(food), listOf(cash)), FakeBudgetStore()),
             budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { month },
             today = { currentDay },
         )

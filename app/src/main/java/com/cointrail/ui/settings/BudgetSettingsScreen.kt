@@ -44,12 +44,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.core.MoneyInput
 import com.cointrail.di.AppContainer
+import com.cointrail.ui.month.MONTH_TITLE_FORMAT
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-private val MONTH_FORMAT: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(Locale.ENGLISH)
+
 
 @Composable
 fun BudgetSettingsRoute(
@@ -219,7 +217,7 @@ private fun MonthPicker(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
         }
         Text(
-            text = stepperMonth.format(MONTH_FORMAT),
+            text = stepperMonth.format(MONTH_TITLE_FORMAT),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = if (pickingMonth) FontWeight.SemiBold else FontWeight.Normal,
             textAlign = TextAlign.Center,
@@ -333,7 +331,7 @@ private fun BudgetDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = if (pickingMonth) {
-                        "Budget for ${pickedMonth?.format(MONTH_FORMAT)}"
+                        "Budget for ${pickedMonth?.format(MONTH_TITLE_FORMAT)}"
                     } else {
                         "Default budget"
                     },

@@ -9,6 +9,7 @@ import com.cointrail.testing.FakeBudgetStore
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
 import com.cointrail.testing.MainDispatcherRule
+import com.cointrail.ui.month.MonthStandingSource
 import com.cointrail.testing.TEST_TIME
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
@@ -66,9 +67,7 @@ class MonthlyReportsViewModelTest {
         categories: List<CatalogItem> = listOf(food, rent, transport),
         initialMonth: YearMonth = month,
     ) = MonthlyReportsViewModel(
-        expenses = store,
-        catalog = FakeCatalogStore(categories),
-        budgets = budgets,
+        monthStanding = MonthStandingSource(store, FakeCatalogStore(categories), budgets),
         initialMonth = initialMonth,
     )
 

@@ -125,6 +125,9 @@ class FakeExpenseStore : ExpenseStore {
     override suspend fun loadBetween(from: LocalDateTime, to: LocalDateTime): List<Expense> =
         all.value.filter { !it.isDeleted && it.occurredAt >= from && it.occurredAt < to }
             .sortedByDescending { it.occurredAt }
+
+    override fun observeHasAny(): Flow<Boolean> =
+        all.map { expenses -> expenses.any { !it.isDeleted } }
 }
 
 /**
