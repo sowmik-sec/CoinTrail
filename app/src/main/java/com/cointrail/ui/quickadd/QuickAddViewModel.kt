@@ -107,19 +107,10 @@ class QuickAddViewModel(
                 paymentMethodId = draft.paymentMethodId,
                 occurredAt = now(),
             )
+            // Save-and-reset: the draft goes blank for the next entry, the picker lists stay.
             draft = ExpenseDraft()
-            _state.update {
-                it.copy(
-                    amountText = "",
-                    amountDisplay = MoneyInput.empty().display(),
-                    selectedCategoryId = null,
-                    selectedPaymentMethodId = null,
-                    note = "",
-                    noteExpanded = false,
-                    canSave = false,
-                    saved = true,
-                )
-            }
+            publish()
+            _state.update { it.copy(saved = true) }
         }
     }
 

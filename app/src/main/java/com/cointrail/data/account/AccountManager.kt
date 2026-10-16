@@ -36,7 +36,7 @@ interface AccountSwitcher {
 class AccountManager(
     context: Context,
     private val session: AccountSession,
-    databaseFactory: (String) -> CoinTrailDatabase = { CoinTrailDatabase.create(context, it) },
+    private val databaseFactory: (String) -> CoinTrailDatabase = { CoinTrailDatabase.create(context, it) },
 ) : AccountSwitcher {
 
     private val appContext: Context = context.applicationContext
@@ -102,5 +102,5 @@ class AccountManager(
     }
 
     private fun openScope(key: String): AccountData =
-        scopes.getOrPut(key) { AccountData(appContext, key) }
+        scopes.getOrPut(key) { AccountData(appContext, key, databaseFactory) }
 }

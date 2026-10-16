@@ -1,16 +1,23 @@
 package com.cointrail.ui.month
 
 import com.cointrail.core.Money
+import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.domain.model.CatalogItem
 import com.cointrail.domain.model.Expense
+import com.cointrail.testing.FakeBudgetAlertStore
+import com.cointrail.testing.FakeBudgetNotifier
 import com.cointrail.testing.FakeBudgetStore
 import com.cointrail.testing.FakeCatalogStore
 import com.cointrail.testing.FakeExpenseStore
+import com.cointrail.testing.MainDispatcherRule
 import com.cointrail.testing.TEST_TIME
+import com.cointrail.ui.home.HomeViewModel
+import com.cointrail.ui.reports.MonthlyReportsViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,6 +29,9 @@ import java.time.YearMonth
  * there is nothing left to diverge.
  */
 class MonthStandingTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val october = YearMonth.of(2026, 10)
     private val noon: LocalDateTime = LocalDateTime.of(2026, 10, 5, 12, 0)
@@ -98,5 +108,25 @@ class MonthStandingTest {
         val standing = source.observe(october).first()
 
         assertEquals(emptyList<com.cointrail.domain.budget.BudgetProgress>(), standing.budgets)
+    }
+
+    @Test
+    fun `home and the monthly report state the same total for the same month`() = runTest(mainDispatcherRule.testDispatcher) {
+        val store = FakeExpenseStore()
+        store.seed(
+            expense("oct-food", 125_000, LocalDateTime.of(2026, 10, 3, 9, 0), "preset-food"),
+            expense("sep-food", 50_000, LocalDateTime.of(2026, 9, 3, 9, 0), "preset-food"),
+        )
+        val source = MonthStandingSource(store, FakeCatalogStore(), FakeBudgetStore())
+        val home = HomeViewModel(
+            expenses = store,
+            catalog = FakeCatalogStore(),
+            monthStanding = source,
+            budgetAlerts = BudgetAlertTracker(FakeBudgetAlertStore(), FakeBudgetNotifier()) { october },
+        )
+        val monthly = MonthlyReportsViewModel(monthStanding = source, initialMonth = october)
+
+        // One assertion, both screens: with one source there is nothing left to diverge.
+        assertEquals(home.state.value.monthTotal, monthly.state.value.total)
     }
 }

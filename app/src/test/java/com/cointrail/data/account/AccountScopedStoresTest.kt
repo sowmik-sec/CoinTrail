@@ -82,6 +82,13 @@ class AccountScopedStoresTest {
             manager.scope(localKey).expenses.observeTotalBetween(dayStart, dayEnd).first(),
         )
 
+        // Each scope's rows live in the injected in-memory database, and nowhere else.
+        assertEquals(2, databases.size)
+        assertEquals(
+            listOf("preset-food"),
+            databases.getValue(localKey).expenseDao().all().map { it.categoryId },
+        )
+
         manager.signOut()
         withTimeout(10_000) {
             while (emissions.receive() != Money(100_000)) {
