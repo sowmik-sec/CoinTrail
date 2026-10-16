@@ -7,8 +7,11 @@ import com.cointrail.data.alerts.BudgetAlertTracker
 import com.cointrail.data.repo.CatalogKind
 import com.cointrail.data.repo.CatalogStore
 import com.cointrail.data.repo.ExpenseStore
+import com.cointrail.domain.budget.BudgetProgress
 import com.cointrail.domain.model.CatalogItem
+import com.cointrail.domain.model.Expense
 import com.cointrail.domain.model.DailyTotal
+import com.cointrail.ui.components.ExpenseRowUi
 import com.cointrail.ui.components.namesById
 import com.cointrail.ui.components.toRow
 import com.cointrail.ui.month.MonthStandingSource
@@ -38,8 +41,8 @@ data class HomeUiState(
     val momPercent: Int? = null,
     val todayTotal: Money = Money.ZERO,
     val todayCount: Int = 0,
-    val recent: List<com.cointrail.ui.components.ExpenseRowUi> = emptyList(),
-    val budgets: List<com.cointrail.domain.budget.BudgetProgress> = emptyList(),
+    val recent: List<ExpenseRowUi> = emptyList(),
+    val budgets: List<BudgetProgress> = emptyList(),
     val hasAnyExpenses: Boolean = false,
     /** Spend for each day of the month from the 1st through today, quiet days as zero. */
     val monthTrail: List<Money> = emptyList(),
@@ -62,7 +65,7 @@ class HomeViewModel(
     val state: StateFlow<HomeUiState> = day.flatMapLatest { date ->
         val dayStart = date.atStartOfDay()
         val dayEnd = dayStart.plusDays(1)
-        val todayBlock: Flow<Pair<List<com.cointrail.domain.model.Expense>, Money>> =
+        val todayBlock: Flow<Pair<List<Expense>, Money>> =
             combine(
                 expenses.observeBetween(dayStart, dayEnd),
                 expenses.observeTotalBetween(dayStart, dayEnd),

@@ -11,6 +11,7 @@ import com.cointrail.domain.model.RecurringSeries
 import com.cointrail.domain.model.visible
 import com.cointrail.ui.components.nameOf
 import com.cointrail.ui.components.namesById
+import com.cointrail.ui.month.nextMonth
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -107,7 +108,7 @@ class RecurringSettingsViewModel(
      */
     private fun firstGenerationMonth(dayOfMonth: Int): YearMonth {
         val current = YearMonth.from(today())
-        return if (today().dayOfMonth <= dayOfMonth) current else current.plusMonths(1)
+        return if (today().dayOfMonth <= dayOfMonth) current else current.nextMonth()
     }
 
     private fun parseAmount(input: String): Money? = Money.fromTaka(input)?.takeIf { it > Money.ZERO }

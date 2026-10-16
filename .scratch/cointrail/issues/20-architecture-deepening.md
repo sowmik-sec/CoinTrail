@@ -1,6 +1,6 @@
 # 20: Architecture deepening
 
-**Status:** ready-for-agent (slices 21–28)
+**Status:** done (slices 21–28)
 
 ## Problem Statement
 

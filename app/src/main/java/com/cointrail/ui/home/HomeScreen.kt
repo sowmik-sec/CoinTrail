@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.month.MONTH_NAME_FORMAT
+import com.cointrail.ui.month.previousMonth
 import com.cointrail.ui.month.MonthStandingSource
 import com.cointrail.ui.components.AmountText
 import com.cointrail.ui.components.BudgetProgressSection
@@ -172,7 +173,7 @@ private fun MonthHero(state: HomeUiState) {
         if (momDelta != null && momPercent != null) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = describeMonthChange(momDelta, momPercent, state.month.minusMonths(1).format(MONTH_NAME_FORMAT)),
+                text = describeMonthChange(momDelta, momPercent, state.month.previousMonth().format(MONTH_NAME_FORMAT)),
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (momDelta.paisa > 0) forest.spendUp else forest.spendDown,
             )

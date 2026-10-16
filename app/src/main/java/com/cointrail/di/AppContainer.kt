@@ -61,18 +61,18 @@ class AppContainer(context: Context) {
     fun googleSignIn(activityContext: Context): GoogleSignIn =
         CredentialManagerGoogleSignIn(activityContext, BuildConfig.GOOGLE_WEB_CLIENT_ID)
 
-/**
- * Account-scoped stores, created once: each one follows the active account itself (ADR-0003), so a
- * caller that holds one across a sign-in/out keeps reading and writing the right scope without any
- * screen rebuilding. The two catalog lists are served by the one catalog store (ticket 24).
- */
-val expenses: ExpenseStore = AccountScopedExpenseStore(accounts)
-val catalog: CatalogStore = AccountScopedCatalogStore(accounts)
-val budgets: BudgetStore = AccountScopedBudgetStore(accounts)
-val recurring: RecurringStore = AccountScopedRecurringStore(accounts)
+    /**
+     * Account-scoped stores, created once: each one follows the active account itself (ADR-0003),
+     * so a caller that holds one across a sign-in/out keeps reading and writing the right scope
+     * without any screen rebuilding. The two catalog lists are served by the one catalog store.
+     */
+    val expenses: ExpenseStore = AccountScopedExpenseStore(accounts)
+    val catalog: CatalogStore = AccountScopedCatalogStore(accounts)
+    val budgets: BudgetStore = AccountScopedBudgetStore(accounts)
+    val recurring: RecurringStore = AccountScopedRecurringStore(accounts)
 
-/** Creates the ordinary expenses for due recurring series, on app open and from the background job. */
-val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recurringGenerator
+    /** Creates the ordinary expenses for due recurring series, on app open and from the background job. */
+    val recurringGenerator: RecurringExpenseGenerator get() = accounts.current.recurringGenerator
     val recurringScheduler: RecurringGenerationScheduler =
         WorkManagerRecurringGenerationScheduler(appContext)
 

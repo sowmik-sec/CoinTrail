@@ -9,6 +9,9 @@ import com.cointrail.data.repo.CatalogStore
 import com.cointrail.domain.budget.OVERALL_BUDGET_LABEL
 import com.cointrail.domain.model.Budget
 import com.cointrail.domain.model.CatalogItem
+import com.cointrail.domain.model.visible
+import com.cointrail.ui.month.nextMonth
+import com.cointrail.ui.month.previousMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -99,9 +102,9 @@ class BudgetSettingsViewModel(
         selection.value = BudgetMonthSelection.Month(month)
     }
 
-    fun showPreviousMonth() = selectMonth(stepperMonth.value.minusMonths(1))
+    fun showPreviousMonth() = selectMonth(stepperMonth.value.previousMonth())
 
-    fun showNextMonth() = selectMonth(stepperMonth.value.plusMonths(1))
+    fun showNextMonth() = selectMonth(stepperMonth.value.nextMonth())
 
     /** Parses and saves a scope's default limit; blank or non-positive input is ignored. */
     fun setDefaultLimit(categoryId: String?, input: String) {
@@ -140,7 +143,7 @@ class BudgetSettingsViewModel(
     private fun rows(budgetList: List<Budget>, categoryList: List<CatalogItem>, picked: BudgetMonthSelection): List<BudgetLimitRow> =
         buildList {
             add(budgetRow(categoryId = null, label = OVERALL_BUDGET_LABEL, budgetList = budgetList, picked = picked))
-            categoryList.filterNot { it.isHidden }.forEach { category ->
+            categoryList.visible().forEach { category ->
                 add(
                     budgetRow(
                         categoryId = category.id,

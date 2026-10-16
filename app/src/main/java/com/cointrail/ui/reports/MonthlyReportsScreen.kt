@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cointrail.core.Money
 import com.cointrail.di.AppContainer
 import com.cointrail.ui.month.MONTH_TITLE_FORMAT
+import com.cointrail.ui.month.previousMonth
 import com.cointrail.ui.month.MonthStandingSource
 import com.cointrail.domain.reports.MonthGrid
 import com.cointrail.ui.components.BudgetProgressSection
@@ -310,7 +311,7 @@ private fun CategoryBreakdownSection(rows: List<CategoryBreakdownRow>, total: Mo
 
 @Composable
 private fun MonthComparisonSection(state: MonthlyReportsUiState) {
-    val previousMonth = state.month.minusMonths(1).format(MONTH_TITLE_FORMAT)
+    val previousMonth = state.month.previousMonth().format(MONTH_TITLE_FORMAT)
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

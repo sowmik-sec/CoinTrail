@@ -4,7 +4,7 @@
 
 **Blocked by:** 27 One projection for expense rows and catalog names
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Home and the Monthly report state identical totals for the same month, asserted once
 - [ ] Neither screen resolves effective budgets or compares months itself
