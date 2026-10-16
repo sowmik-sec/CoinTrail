@@ -68,40 +68,6 @@ class QuickAddViewModelTest {
     }
 
     @Test
-    fun `cannot save until a positive amount and a category are chosen`() {
-        val vm = viewModel()
-        assertFalse(vm.state.value.canSave)
-
-        vm.enter("0")
-        assertFalse(vm.state.value.canSave)
-
-        vm.enter("50")
-        vm.selectCategory("preset-food")
-        assertTrue(vm.state.value.canSave)
-    }
-
-    @Test
-    fun `keypad edits are reflected in the amount text`() {
-        val vm = viewModel()
-
-        vm.enter("12.50")
-
-        assertEquals("12.50", vm.state.value.amountText)
-        vm.onBackspace()
-        assertEquals("12.5", vm.state.value.amountText)
-    }
-
-    @Test
-    fun `the amount is shown grouped the way money is displayed`() {
-        val vm = viewModel()
-        assertEquals("৳0", vm.state.value.amountDisplay)
-
-        vm.enter("1250")
-
-        assertEquals("৳1,250", vm.state.value.amountDisplay)
-    }
-
-    @Test
     fun `save records the amount category note payment method and current time`() = runTest(mainDispatcherRule.testDispatcher) {
         val vm = viewModel()
         vm.enter("12.50")
@@ -143,26 +109,6 @@ class QuickAddViewModelTest {
 
         assertTrue(expenses.calls.isEmpty())
         assertFalse(vm.state.value.saved)
-    }
-
-    @Test
-    fun `tapping the selected payment method again clears it`() {
-        val vm = viewModel()
-
-        vm.selectPaymentMethod("pm-cash")
-        assertEquals("pm-cash", vm.state.value.selectedPaymentMethodId)
-
-        vm.selectPaymentMethod("pm-cash")
-        assertNull(vm.state.value.selectedPaymentMethodId)
-    }
-
-    @Test
-    fun `the note field starts collapsed and can be expanded`() {
-        val vm = viewModel()
-        assertFalse(vm.state.value.noteExpanded)
-
-        vm.toggleNoteExpanded()
-        assertTrue(vm.state.value.noteExpanded)
     }
 
     @Test

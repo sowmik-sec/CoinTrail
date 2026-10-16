@@ -108,20 +108,6 @@ class EditExpenseViewModelTest {
     }
 
     @Test
-    fun `cannot save once the amount is cleared`() = runTest(mainDispatcherRule.testDispatcher) {
-        val store = FakeExpenseStore()
-        store.seed(expense())
-        val vm = viewModel(store = store)
-        assertTrue(vm.state.value.canSave)
-
-        repeat(5) { vm.onBackspace() }
-
-        assertFalse(vm.state.value.canSave)
-        vm.onDigit('5')
-        assertTrue(vm.state.value.canSave)
-    }
-
-    @Test
     fun `saving writes the edited amount category note payment method and datetime`() = runTest(mainDispatcherRule.testDispatcher) {
         val store = FakeExpenseStore()
         val original = expense(note = "old", paymentMethodId = "pm-cash")
@@ -159,17 +145,14 @@ class EditExpenseViewModelTest {
     }
 
     @Test
-    fun `tapping the selected payment method again clears it and a blank note is stored as null`() = runTest(mainDispatcherRule.testDispatcher) {
+    fun `a blank note is stored as null`() = runTest(mainDispatcherRule.testDispatcher) {
         val store = FakeExpenseStore()
-        store.seed(expense(note = "old", paymentMethodId = "pm-cash"))
+        store.seed(expense(note = "old"))
         val vm = viewModel(store = store)
 
-        vm.selectPaymentMethod("pm-cash")
         vm.setNote("   ")
         vm.save()
 
-        val written = store.updates.single()
-        assertNull(written.paymentMethodId)
-        assertNull(written.note)
+        assertNull(store.updates.single().note)
     }
 }

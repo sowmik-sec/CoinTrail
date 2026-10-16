@@ -2,6 +2,7 @@ package com.cointrail.ui.edit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cointrail.core.ExpenseDraft
 import com.cointrail.core.Money
 import com.cointrail.core.MoneyInput
 import com.cointrail.data.repo.CatalogKind
@@ -24,7 +25,7 @@ data class EditExpenseUiState(
     val loading: Boolean = true,
     val notFound: Boolean = false,
     val amountText: String = "",
-    val amountDisplay: String = "৳0",
+    val amountDisplay: String = MoneyInput.empty().display(),
     val categories: List<CatalogItem> = emptyList(),
     val paymentMethods: List<CatalogItem> = emptyList(),
     val selectedCategoryId: String? = null,
@@ -36,13 +37,18 @@ data class EditExpenseUiState(
     val saved: Boolean = false,
 )
 
+/**
+ * Backs the edit screen (SPEC §6.3): the amount and selection rules live in [ExpenseDraft], shared
+ * with quick-add; what edit itself owns is loading the expense, its timestamp, and writing the
+ * change back.
+ */
 class EditExpenseViewModel(
     private val expenseId: String,
     private val expenses: ExpenseStore,
     private val catalog: CatalogStore,
 ) : ViewModel() {
 
-    private var amount: MoneyInput = MoneyInput.empty()
+    private var draft = ExpenseDraft()
     private var original: Expense? = null
 
     private val _state = MutableStateFlow(EditExpenseUiState())
@@ -69,55 +75,61 @@ class EditExpenseViewModel(
             return
         }
         original = expense
-        amount = MoneyInput.fromMoney(expense.amount)
+        draft = ExpenseDraft(
+            amount = MoneyInput.fromMoney(expense.amount),
+            categoryId = expense.categoryId,
+            paymentMethodId = expense.paymentMethodId,
+            note = expense.note.orEmpty(),
+            noteExpanded = !expense.note.isNullOrBlank(),
+        )
         _state.update {
             it.copy(
                 loading = false,
-                amountText = amount.text,
-                amountDisplay = amount.display(),
-                selectedCategoryId = expense.categoryId,
-                selectedPaymentMethodId = expense.paymentMethodId,
-                note = expense.note.orEmpty(),
-                noteExpanded = !expense.note.isNullOrBlank(),
+                amountText = draft.amount.text,
+                amountDisplay = draft.amount.display(),
+                selectedCategoryId = draft.categoryId,
+                selectedPaymentMethodId = draft.paymentMethodId,
+                note = draft.note,
+                noteExpanded = draft.noteExpanded,
                 occurredAt = expense.occurredAt,
-                canSave = amount.canSave,
+                canSave = draft.canSave,
             )
         }
     }
 
     fun onDigit(digit: Char) {
-        amount = amount.appendDigit(digit)
-        updateAmountState()
+        draft = draft.onDigit(digit)
+        publish()
     }
 
     fun onDecimal() {
-        amount = amount.appendDecimal()
-        updateAmountState()
+        draft = draft.onDecimal()
+        publish()
     }
 
     fun onBackspace() {
-        amount = amount.backspace()
-        updateAmountState()
+        draft = draft.onBackspace()
+        publish()
     }
 
     fun selectCategory(categoryId: String) {
-        _state.update { it.copy(selectedCategoryId = categoryId) }
-        updateAmountState()
+        draft = draft.selectCategory(categoryId)
+        publish()
     }
 
     fun selectPaymentMethod(paymentMethodId: String) {
-        _state.update {
-            val next = if (it.selectedPaymentMethodId == paymentMethodId) null else paymentMethodId
-            it.copy(selectedPaymentMethodId = next)
-        }
+        draft = draft.selectPaymentMethod(paymentMethodId)
+        publish()
     }
 
     fun setNote(note: String) {
-        _state.update { it.copy(note = note) }
+        draft = draft.setNote(note)
+        publish()
     }
 
     fun toggleNoteExpanded() {
-        _state.update { it.copy(noteExpanded = !it.noteExpanded) }
+        draft = draft.toggleNoteExpanded()
+        publish()
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -130,18 +142,17 @@ class EditExpenseViewModel(
 
     fun save() {
         val unedited = original ?: return
-        val money = amount.toMoney() ?: return
+        val money = draft.money() ?: return
         if (money <= Money.ZERO) return
-        val current = _state.value
-        val categoryId = current.selectedCategoryId ?: return
-        val occurredAt = current.occurredAt ?: return
+        val categoryId = draft.categoryId ?: return
+        val occurredAt = _state.value.occurredAt ?: return
         viewModelScope.launch {
             expenses.update(
                 unedited.copy(
                     amount = money,
                     categoryId = categoryId,
-                    note = current.note.ifBlank { null },
-                    paymentMethodId = current.selectedPaymentMethodId,
+                    note = draft.note.ifBlank { null },
+                    paymentMethodId = draft.paymentMethodId,
                     occurredAt = occurredAt,
                 )
             )
@@ -153,8 +164,17 @@ class EditExpenseViewModel(
         _state.update { it.copy(saved = false) }
     }
 
-    private fun updateAmountState() {
-        val canSave = amount.canSave && _state.value.selectedCategoryId != null
-        _state.update { it.copy(amountText = amount.text, amountDisplay = amount.display(), canSave = canSave) }
+    private fun publish() {
+        _state.update {
+            it.copy(
+                amountText = draft.amount.text,
+                amountDisplay = draft.amount.display(),
+                selectedCategoryId = draft.categoryId,
+                selectedPaymentMethodId = draft.paymentMethodId,
+                note = draft.note,
+                noteExpanded = draft.noteExpanded,
+                canSave = draft.canSave,
+            )
+        }
     }
 }

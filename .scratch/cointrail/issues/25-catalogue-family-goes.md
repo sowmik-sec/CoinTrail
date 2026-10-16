@@ -4,7 +4,7 @@
 
 **Blocked by:** 24 Catalogue — one store serves both lists
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No payment-method-specific model, storage row, query set, store or fake remains
 - [ ] One implementation serves both lists behind the single store

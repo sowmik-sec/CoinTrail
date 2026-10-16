@@ -2,6 +2,7 @@ package com.cointrail.ui.quickadd
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cointrail.core.ExpenseDraft
 import com.cointrail.core.Money
 import com.cointrail.core.MoneyInput
 import com.cointrail.data.repo.CatalogKind
@@ -19,7 +20,7 @@ import java.time.LocalDateTime
 
 data class QuickAddUiState(
     val amountText: String = "",
-    val amountDisplay: String = "৳0",
+    val amountDisplay: String = MoneyInput.empty().display(),
     val categories: List<CatalogItem> = emptyList(),
     val paymentMethods: List<CatalogItem> = emptyList(),
     val selectedCategoryId: String? = null,
@@ -30,13 +31,18 @@ data class QuickAddUiState(
     val saved: Boolean = false,
 )
 
+/**
+ * Backs quick-add (SPEC §6.2): the amount and selection rules live in [ExpenseDraft], shared with
+ * the edit screen; what quick-add itself owns is the picker feed and saving plus resetting the
+ * draft for the next entry.
+ */
 class QuickAddViewModel(
     private val expenses: ExpenseStore,
     private val catalog: CatalogStore,
     private val now: () -> LocalDateTime = { LocalDateTime.now() },
 ) : ViewModel() {
 
-    private var amount: MoneyInput = MoneyInput.empty()
+    private var draft = ExpenseDraft()
 
     private val _state = MutableStateFlow(QuickAddUiState())
     val state: StateFlow<QuickAddUiState> = _state.asStateFlow()
@@ -55,54 +61,53 @@ class QuickAddViewModel(
     }
 
     fun onDigit(digit: Char) {
-        amount = amount.appendDigit(digit)
-        updateAmountState()
+        draft = draft.onDigit(digit)
+        publish()
     }
 
     fun onDecimal() {
-        amount = amount.appendDecimal()
-        updateAmountState()
+        draft = draft.onDecimal()
+        publish()
     }
 
     fun onBackspace() {
-        amount = amount.backspace()
-        updateAmountState()
+        draft = draft.onBackspace()
+        publish()
     }
 
     fun selectCategory(categoryId: String) {
-        _state.update { it.copy(selectedCategoryId = categoryId) }
-        updateAmountState()
+        draft = draft.selectCategory(categoryId)
+        publish()
     }
 
     fun selectPaymentMethod(paymentMethodId: String) {
-        _state.update {
-            val next = if (it.selectedPaymentMethodId == paymentMethodId) null else paymentMethodId
-            it.copy(selectedPaymentMethodId = next)
-        }
+        draft = draft.selectPaymentMethod(paymentMethodId)
+        publish()
     }
 
     fun setNote(note: String) {
-        _state.update { it.copy(note = note) }
+        draft = draft.setNote(note)
+        publish()
     }
 
     fun toggleNoteExpanded() {
-        _state.update { it.copy(noteExpanded = !it.noteExpanded) }
+        draft = draft.toggleNoteExpanded()
+        publish()
     }
 
     fun save() {
-        val money = amount.toMoney() ?: return
+        val money = draft.money() ?: return
         if (money <= Money.ZERO) return
-        val current = _state.value
-        val categoryId = current.selectedCategoryId ?: return
+        val categoryId = draft.categoryId ?: return
         viewModelScope.launch {
             expenses.add(
                 amount = money,
                 categoryId = categoryId,
-                note = current.note.ifBlank { null },
-                paymentMethodId = current.selectedPaymentMethodId,
+                note = draft.note.ifBlank { null },
+                paymentMethodId = draft.paymentMethodId,
                 occurredAt = now(),
             )
-            amount = MoneyInput.empty()
+            draft = ExpenseDraft()
             _state.update {
                 it.copy(
                     amountText = "",
@@ -122,8 +127,17 @@ class QuickAddViewModel(
         _state.update { it.copy(saved = false) }
     }
 
-    private fun updateAmountState() {
-        val canSave = amount.canSave && _state.value.selectedCategoryId != null
-        _state.update { it.copy(amountText = amount.text, amountDisplay = amount.display(), canSave = canSave) }
+    private fun publish() {
+        _state.update {
+            it.copy(
+                amountText = draft.amount.text,
+                amountDisplay = draft.amount.display(),
+                selectedCategoryId = draft.categoryId,
+                selectedPaymentMethodId = draft.paymentMethodId,
+                note = draft.note,
+                noteExpanded = draft.noteExpanded,
+                canSave = draft.canSave,
+            )
+        }
     }
 }
