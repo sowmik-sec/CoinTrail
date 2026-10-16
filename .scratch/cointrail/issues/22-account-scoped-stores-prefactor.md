@@ -4,7 +4,7 @@
 
 **Blocked by:** 21 Delete the dead query-side tails — sequencing only, not a dependency: worked second so the one slice that changes observable behaviour starts from a smaller tree
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An account change changes what a store already held by a screen emits, with no relaunch of the Activity and no task cleared
 - [ ] A single store instance, held across the switch, emits the newly signed-in scope's rows — asserted over two in-memory scopes behind a fake session
